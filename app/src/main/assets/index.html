@@ -277,6 +277,7 @@ function switchTab(mode){
 function openTCS(){
   $("wvFrame").src="https://tcs.eqso.be/RHTime";
   $("wvPanel").classList.add("open");
+  if(window.Android && window.Android.notifyWebViewOpen) window.Android.notifyWebViewOpen();
 }
 function closeWV(){
   $("wvPanel").classList.remove("open");
