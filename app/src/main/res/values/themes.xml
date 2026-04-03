@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.TCSCalendar" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">#2563EB</item>
+        <item name="colorPrimaryDark">#1E40AF</item>
+        <item name="colorAccent">#06B6D4</item>
+        <item name="android:windowBackground">#0A0F1E</item>
+        <item name="android:statusBarColor">#0A0F1E</item>
+        <item name="android:navigationBarColor">#0A0F1E</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>
