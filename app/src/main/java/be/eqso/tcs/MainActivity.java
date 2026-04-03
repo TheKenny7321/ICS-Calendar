@@ -40,24 +40,10 @@ public class MainActivity extends AppCompatActivity {
 
     private WebView webView;
     private ValueCallback<Uri[]> filePathCallback;
-
-    private long    pendingDownloadId   = -1;
-    private boolean polling             = false;
-    private boolean xmlInjected         = false;
-    private boolean webViewVisible      = false; // true = on est sur le site TCS
+    private long    pendingDownloadId = -1;
+    private boolean polling           = false;
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
-
-    // ── Dossier privé (cache interne, pas besoin de permission) ──────────────
-    private File getPrivateXmlDir() {
-        File dir = new File(getCacheDir(), "tcs_xml");
-        if (!dir.exists()) dir.mkdirs();
-        return dir;
-    }
-
-    private File getPrivateXmlFile() {
-        return new File(getPrivateXmlDir(), XML_NAME);
-    }
 
     // ── File picker manuel ────────────────────────────────────────────────────
     private final ActivityResultLauncher<Intent> filePickerLauncher =
@@ -72,7 +58,7 @@ public class MainActivity extends AppCompatActivity {
             filePathCallback = null;
         });
 
-    // ── Polling DownloadManager ───────────────────────────────────────────────
+    // ── Polling : attend la fin du téléchargement ─────────────────────────────
     private final Runnable pollDownload = new Runnable() {
         @Override
         public void run() {
@@ -85,28 +71,29 @@ public class MainActivity extends AppCompatActivity {
 
             if (c == null) { mainHandler.postDelayed(this, 1000); return; }
 
-            if (c.moveToFirst()) {
-                int status = c.getInt(c.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS));
+            if (!c.moveToFirst()) {
+                c.close();
+                mainHandler.postDelayed(this, 1000);
+                return;
+            }
 
-                if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                    // Récupérer le chemin public du fichier téléchargé
-                    String publicPath = c.getString(
-                        c.getColumnIndexOrThrow(DownloadManager.COLUMN_LOCAL_FILENAME));
-                    c.close();
-                    polling = false;
-                    Log.d(TAG, "Download OK at: " + publicPath);
-                    copyToPrivateAndProcess(publicPath);
+            int status = c.getInt(c.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS));
 
-                } else if (status == DownloadManager.STATUS_FAILED) {
-                    c.close();
-                    polling = false;
-                    mainHandler.post(() -> Toast.makeText(MainActivity.this,
-                        "❌ Téléchargement échoué", Toast.LENGTH_LONG).show());
+            if (status == DownloadManager.STATUS_SUCCESSFUL) {
+                String path = c.getString(
+                    c.getColumnIndexOrThrow(DownloadManager.COLUMN_LOCAL_FILENAME));
+                c.close();
+                polling = false;
+                Log.d(TAG, "Download done: " + path);
+                // Copier en privé, supprimer l'original, puis charger l'écran principal
+                copyThenShowHome(path);
 
-                } else {
-                    c.close();
-                    mainHandler.postDelayed(this, 1000);
-                }
+            } else if (status == DownloadManager.STATUS_FAILED) {
+                c.close();
+                polling = false;
+                mainHandler.post(() -> Toast.makeText(MainActivity.this,
+                    "❌ Téléchargement échoué", Toast.LENGTH_LONG).show());
+
             } else {
                 c.close();
                 mainHandler.postDelayed(this, 1000);
@@ -114,90 +101,63 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
-    // ── Copier dans le dossier privé puis supprimer l'original ───────────────
-    private void copyToPrivateAndProcess(final String publicPath) {
+    // ── Copier le XML en cache privé puis afficher l'écran principal ──────────
+    private void copyThenShowHome(final String publicPath) {
         new Thread(() -> {
             try {
+                // Attendre que le fichier soit disponible
                 File src = new File(publicPath);
-
-                // Attendre max 5s que le fichier soit accessible
-                int tries = 0;
-                while ((!src.exists() || src.length() == 0) && tries < 10) {
+                for (int i = 0; i < 10 && (!src.exists() || src.length() == 0); i++) {
                     Thread.sleep(500);
-                    tries++;
                 }
-
-                if (!src.exists()) {
+                if (!src.exists() || src.length() == 0) {
                     mainHandler.post(() -> Toast.makeText(MainActivity.this,
-                        "❌ Fichier XML introuvable : " + publicPath,
-                        Toast.LENGTH_LONG).show());
+                        "❌ Fichier XML non accessible", Toast.LENGTH_LONG).show());
                     return;
                 }
 
-                // Copier vers le cache privé
-                File dest = getPrivateXmlFile();
+                // Copier dans le cache privé de l'app
+                File dest = new File(getCacheDir(), XML_NAME);
                 if (dest.exists()) dest.delete();
-
-                FileInputStream  fis = new FileInputStream(src);
-                FileOutputStream fos = new FileOutputStream(dest);
-                byte[] buf = new byte[4096];
-                int n;
-                while ((n = fis.read(buf)) != -1) fos.write(buf, 0, n);
-                fis.close();
-                fos.close();
-
-                // Supprimer l'original dans Downloads
+                try (FileInputStream  in  = new FileInputStream(src);
+                     FileOutputStream out = new FileOutputStream(dest)) {
+                    byte[] buf = new byte[4096];
+                    int n;
+                    while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
+                }
+                // Supprimer le fichier public
                 src.delete();
-                Log.d(TAG, "Copied to private, deleted original");
+                Log.d(TAG, "XML copied to cache, original deleted");
 
-                // Lire et injecter
-                readPrivateXmlAndInject();
+                // Lire le contenu
+                FileInputStream fis = new FileInputStream(dest);
+                byte[] bytes = new byte[(int) dest.length()];
+                fis.read(bytes);
+                fis.close();
+                final String xml = new String(bytes, StandardCharsets.UTF_8);
+
+                // Retour sur le thread UI : charger index.html puis injecter
+                mainHandler.post(() -> loadHomeAndInject(xml));
 
             } catch (Exception e) {
-                Log.e(TAG, "copyToPrivate error", e);
+                Log.e(TAG, "copyThenShowHome error", e);
                 mainHandler.post(() -> Toast.makeText(MainActivity.this,
-                    "Erreur copie XML : " + e.getMessage(), Toast.LENGTH_LONG).show());
+                    "Erreur : " + e.getMessage(), Toast.LENGTH_LONG).show());
             }
         }).start();
     }
 
-    // ── Lire le XML privé et injecter dans la page ───────────────────────────
-    private void readPrivateXmlAndInject() {
-        try {
-            File f = getPrivateXmlFile();
-            FileInputStream fis = new FileInputStream(f);
-            byte[] buf = new byte[(int) f.length()];
-            fis.read(buf);
-            fis.close();
-            String xml = new String(buf, StandardCharsets.UTF_8);
-            Log.d(TAG, "Private XML read OK, length=" + xml.length());
+    // ── Charger index.html, attendre qu'elle soit prête, injecter le XML ──────
+    private void loadHomeAndInject(final String xml) {
+        // Échapper pour template literal JS
+        final String safe = xml
+            .replace("\\", "\\\\")
+            .replace("`",  "\\`")
+            .replace("$",  "\\$");
 
-            final String safe = xml
-                .replace("\\", "\\\\")
-                .replace("`",  "\\`")
-                .replace("$",  "\\$");
-
-            // Fermer le navigateur TCS et charger la page principale
-            mainHandler.post(() -> {
-                webViewVisible = false;
-                navigateAndInject(safe);
-            });
-
-        } catch (Exception e) {
-            Log.e(TAG, "readPrivateXml error", e);
-            mainHandler.post(() -> Toast.makeText(MainActivity.this,
-                "Erreur lecture XML : " + e.getMessage(), Toast.LENGTH_LONG).show());
-        }
-    }
-
-    // ── Charger index.html puis injecter le XML via JS ────────────────────────
-    private void navigateAndInject(String safeXml) {
-        xmlInjected = false;
-        Log.d(TAG, "navigateAndInject: loading index.html");
-
-        // Forcer le retour à la page principale (ferme le "navigateur" TCS)
+        // Empêcher le retour vers le site TCS
         webView.stopLoading();
-        webView.clearHistory();  // empêche le retour-arrière vers TCS
+        webView.clearHistory();
         webView.loadUrl("file:///android_asset/index.html");
 
         webView.setWebViewClient(new WebViewClient() {
@@ -205,20 +165,17 @@ public class MainActivity extends AppCompatActivity {
             public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
                 return false;
             }
-
             @Override
             public void onPageFinished(WebView view, String url) {
-                if (!url.contains("android_asset") || xmlInjected) return;
-                Log.d(TAG, "index.html loaded, injecting in 800ms");
+                if (!url.contains("android_asset")) return;
+                // Remettre le client par défaut
                 webView.setWebViewClient(defaultClient());
-
+                // Délai pour laisser le JS s'initialiser
                 mainHandler.postDelayed(() -> {
-                    xmlInjected = true;
                     String js =
                         "(function(){" +
                         "try{" +
-                        "  var xml=`" + safeXml + "`;" +
-                        "  var evs=parseXML(xml);" +
+                        "  var evs=parseXML(`" + safe + "`);" +
                         "  if(!evs||evs.length===0){" +
                         "    Android.showToast('⚠️ Aucun événement trouvé');" +
                         "    return;" +
@@ -227,10 +184,10 @@ public class MainActivity extends AppCompatActivity {
                         "  showPreview(evs);" +
                         "  Android.onXmlLoaded(evs.length);" +
                         "}catch(e){" +
-                        "  Android.showToast('Erreur JS: '+e.message);" +
+                        "  Android.showToast('Erreur: '+e.message);" +
                         "}" +
                         "})();";
-                    webView.evaluateJavascript(js, res -> Log.d(TAG, "JS: " + res));
+                    webView.evaluateJavascript(js, res -> Log.d(TAG, "JS result: " + res));
                 }, 800);
             }
         });
@@ -253,13 +210,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         webView = findViewById(R.id.webView);
         setupWebView();
-
-        // Si XML en attente au démarrage (app rouverte après download)
-        File pending = getPrivateXmlFile();
-        if (pending.exists()) {
-            Log.d(TAG, "Pending XML found on start");
-            mainHandler.postDelayed(() -> readPrivateXmlAndInject(), 1200);
-        }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -298,11 +248,11 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // ── DownloadListener ─────────────────────────────────────────────────
+        // ── DownloadListener : intercepte l'export XML du site TCS ───────────
         webView.setDownloadListener((url, userAgent, contentDisposition, mimeType, length) -> {
             try {
-                // Nom fixe pour éviter Export-1.xml, Export-2.xml, etc.
-                String filename = "tcs_export.xml";
+                // Toujours le même nom → écrase le précédent, jamais de Export-1.xml
+                String filename = XML_NAME;
 
                 // Supprimer l'éventuel résidu dans Downloads
                 File old = new File(
@@ -310,34 +260,31 @@ public class MainActivity extends AppCompatActivity {
                         Environment.DIRECTORY_DOWNLOADS), filename);
                 if (old.exists()) old.delete();
 
+                // Annuler un éventuel download précédent
+                if (pendingDownloadId >= 0) {
+                    ((DownloadManager) getSystemService(DOWNLOAD_SERVICE))
+                        .remove(pendingDownloadId);
+                }
+
                 DownloadManager.Request req = new DownloadManager.Request(Uri.parse(url));
                 req.setMimeType("text/xml");
                 String cookies = CookieManager.getInstance().getCookie(url);
                 if (cookies != null) req.addRequestHeader("Cookie", cookies);
                 req.addRequestHeader("User-Agent", userAgent);
                 req.setTitle("Horaire TCS");
-                req.setDescription("Téléchargement en cours...");
+                req.setDescription("Récupération du planning...");
                 req.setNotificationVisibility(
                     DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-                // Télécharger dans Downloads public (seul endroit accepté par DownloadManager)
                 req.setDestinationInExternalPublicDir(
                     Environment.DIRECTORY_DOWNLOADS, filename);
 
-                // Annuler le download précédent s'il existe
-                if (pendingDownloadId >= 0) {
-                    DownloadManager dm0 = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
-                    dm0.remove(pendingDownloadId);
-                }
-
                 DownloadManager dm = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
                 pendingDownloadId = dm.enqueue(req);
-                polling    = true;
-                xmlInjected = false;
+                polling = true;
 
-                Log.d(TAG, "Download enqueued id=" + pendingDownloadId + " file=" + filename);
-                Toast.makeText(this, "⬇️ Téléchargement en cours…", Toast.LENGTH_SHORT).show();
+                Log.d(TAG, "Download started id=" + pendingDownloadId);
+                Toast.makeText(this, "⬇️ Récupération du planning…", Toast.LENGTH_SHORT).show();
 
-                // Lancer le polling
                 mainHandler.removeCallbacks(pollDownload);
                 mainHandler.postDelayed(pollDownload, 1500);
 
@@ -352,18 +299,8 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
-        if (webView.canGoBack() && webViewVisible) {
-            // Sur le site TCS → retour arrière dans le navigateur
-            webView.goBack();
-        } else if (webViewVisible) {
-            // Sortir du navigateur TCS → retour à l'app
-            webViewVisible = false;
-            webView.stopLoading();
-            webView.clearHistory();
-            webView.loadUrl("file:///android_asset/index.html");
-        } else {
-            super.onBackPressed();
-        }
+        if (webView.canGoBack()) webView.goBack();
+        else super.onBackPressed();
     }
 
     // ── JavaScript Bridge ─────────────────────────────────────────────────────
@@ -371,28 +308,16 @@ public class MainActivity extends AppCompatActivity {
 
         @JavascriptInterface
         public void onXmlLoaded(int count) {
-            Log.d(TAG, "onXmlLoaded count=" + count);
-            mainHandler.post(() -> Toast.makeText(MainActivity.this,
-                "✅ " + count + " événements chargés !", Toast.LENGTH_SHORT).show());
-            deletePrivateXml();
+            // Supprimer le XML du cache privé
+            File f = new File(getCacheDir(), XML_NAME);
+            if (f.exists()) f.delete();
+            Log.d(TAG, "XML deleted after load, count=" + count);
         }
 
         @JavascriptInterface
         public void onIcsExported() {
-            deletePrivateXml();
-        }
-
-        private void deletePrivateXml() {
-            File f = getPrivateXmlFile();
-            if (f.exists()) {
-                boolean ok = f.delete();
-                Log.d(TAG, "Private XML deleted=" + ok);
-            }
-        }
-
-        @JavascriptInterface
-        public void notifyWebViewOpen() {
-            webViewVisible = true;
+            File f = new File(getCacheDir(), XML_NAME);
+            if (f.exists()) f.delete();
         }
 
         @JavascriptInterface
@@ -437,6 +362,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @JavascriptInterface
-        public String getAppVersion() { return "1.6"; }
+        public String getAppVersion() { return "1.7"; }
     }
 }
