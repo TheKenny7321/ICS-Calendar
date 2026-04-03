@@ -399,6 +399,7 @@ async function exportICS(openCal){
     if(window.Android && window.Android.saveAndOpenICS){
       window.Android.saveAndOpenICS(ics, fname, openCal);
       toast(openCal?"📅 Ouverture dans Calendar…":"↑ Partage en cours…","ok");
+      if(window.Android.onIcsExported) window.Android.onIcsExported();
     } else {
       // Fallback navigateur (PWA ou dev)
       const blob=new Blob([ics],{type:"text/calendar;charset=utf-8"});
@@ -408,6 +409,7 @@ async function exportICS(openCal){
       document.body.appendChild(a);a.click();document.body.removeChild(a);
       setTimeout(()=>URL.revokeObjectURL(url),5000);
       toast("💾 Fichier .ics téléchargé","ok");
+      if(window.Android && window.Android.onIcsExported) window.Android.onIcsExported();
     }
   }catch(e){
     toast("❌ "+e.message,"err");
