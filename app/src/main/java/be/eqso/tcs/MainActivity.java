@@ -3,10 +3,15 @@ package be.eqso.tcs;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.DownloadManager;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -27,177 +32,184 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.FileProvider;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static final String TAG      = "TCSCalendar";
-    private static final String XML_NAME = "tcs_export.xml"; // nom fixe, écrase toujours
+    private static final String TAG = "TCSCalendar";
 
     private WebView webView;
     private ValueCallback<Uri[]> filePathCallback;
-
-    private long    pendingDownloadId = -1;
-    private boolean polling           = false;
-    private boolean xmlInjected       = false; // évite double injection si app revient au premier plan
+    private long lastDownloadId = -1;
+    private String lastDownloadedPath = null;
+    private boolean appPageReady = false;
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
-    // Dossier privé de l'app : getCacheDir()/tcs_xml/
-    private File getXmlDir() {
-        File dir = new File(getCacheDir(), "tcs_xml");
-        if (!dir.exists()) dir.mkdirs();
-        return dir;
-    }
-
-    private File getXmlFile() {
-        return new File(getXmlDir(), XML_NAME);
-    }
-
-    // ── File picker (import manuel) ───────────────────────────────────────────
     private final ActivityResultLauncher<Intent> filePickerLauncher =
         registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
             if (filePathCallback == null) return;
-            Uri[] out = null;
+            Uri[] results = null;
             if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
                 Uri uri = result.getData().getData();
-                if (uri != null) out = new Uri[]{uri};
+                if (uri != null) results = new Uri[]{uri};
             }
-            filePathCallback.onReceiveValue(out);
+            filePathCallback.onReceiveValue(results);
             filePathCallback = null;
         });
 
-    // ── Polling : vérifie que le téléchargement est terminé ──────────────────
-    private final Runnable pollDownload = new Runnable() {
+    // ── Receiver : téléchargement terminé ────────────────────────────────────
+    private final BroadcastReceiver downloadReceiver = new BroadcastReceiver() {
         @Override
-        public void run() {
-            if (!polling || pendingDownloadId < 0) return;
+        public void onReceive(Context ctx, Intent intent) {
+            long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
+            Log.d(TAG, "Download received id=" + id + " lastId=" + lastDownloadId);
+            if (id != lastDownloadId) return;
 
             DownloadManager dm = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
             DownloadManager.Query q = new DownloadManager.Query();
-            q.setFilterById(pendingDownloadId);
+            q.setFilterById(id);
             Cursor c = dm.query(q);
 
             if (c != null && c.moveToFirst()) {
                 int status = c.getInt(c.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS));
-                c.close();
+                Log.d(TAG, "Download status=" + status);
 
                 if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                    polling = false;
-                    Log.d(TAG, "Download complete, reading XML");
-                    readXmlAndInject();
-
-                } else if (status == DownloadManager.STATUS_FAILED) {
-                    polling = false;
-                    Toast.makeText(MainActivity.this,
-                        "❌ Téléchargement échoué", Toast.LENGTH_LONG).show();
-
+                    // Récupérer le chemin — sur Android récent c'est un content:// URI
+                    String localUri = c.getString(
+                        c.getColumnIndexOrThrow(DownloadManager.COLUMN_LOCAL_URI));
+                    String localPath = c.getString(
+                        c.getColumnIndexOrThrow(DownloadManager.COLUMN_LOCAL_FILENAME));
+                    Log.d(TAG, "localUri=" + localUri + " localPath=" + localPath);
+                    c.close();
+                    processDownloadedFile(localUri, localPath);
                 } else {
-                    // Toujours en cours
-                    if (c != null) c.close();
-                    mainHandler.postDelayed(this, 1000);
+                    c.close();
+                    mainHandler.post(() -> Toast.makeText(MainActivity.this,
+                        "❌ Téléchargement échoué (status=" + status + ")",
+                        Toast.LENGTH_LONG).show());
                 }
             } else {
+                Log.e(TAG, "Cursor null or empty");
                 if (c != null) c.close();
-                mainHandler.postDelayed(this, 1000);
             }
         }
     };
 
-    // ── Lire le XML depuis le dossier privé et injecter ───────────────────────
-    private void readXmlAndInject() {
+    // ── Lire le fichier XML et l'injecter dans le JS ──────────────────────────
+    private void processDownloadedFile(String localUri, String localPath) {
         new Thread(() -> {
             try {
-                File xmlFile = getXmlFile();
-                if (!xmlFile.exists()) {
+                String xmlContent = null;
+
+                // Essai 1 : chemin fichier direct
+                if (localPath != null && !localPath.isEmpty()) {
+                    File f = new File(localPath);
+                    if (f.exists() && f.canRead()) {
+                        Log.d(TAG, "Reading from path: " + localPath);
+                        FileInputStream fis = new FileInputStream(f);
+                        byte[] buf = new byte[(int) f.length()];
+                        fis.read(buf);
+                        fis.close();
+                        xmlContent = new String(buf, StandardCharsets.UTF_8);
+                        lastDownloadedPath = localPath;
+                    }
+                }
+
+                // Essai 2 : content URI via ContentResolver
+                if (xmlContent == null && localUri != null) {
+                    Log.d(TAG, "Reading from URI: " + localUri);
+                    Uri uri = Uri.parse(localUri);
+                    InputStream is = getContentResolver().openInputStream(uri);
+                    if (is != null) {
+                        byte[] buf = is.readAllBytes();
+                        is.close();
+                        xmlContent = new String(buf, StandardCharsets.UTF_8);
+                        lastDownloadedPath = localPath; // peut être null, on gère
+                    }
+                }
+
+                if (xmlContent == null) {
                     mainHandler.post(() -> Toast.makeText(MainActivity.this,
-                        "❌ Fichier XML introuvable dans le dossier privé",
-                        Toast.LENGTH_LONG).show());
+                        "❌ Impossible de lire le fichier XML", Toast.LENGTH_LONG).show());
                     return;
                 }
 
-                FileInputStream fis = new FileInputStream(xmlFile);
-                byte[] buf = new byte[(int) xmlFile.length()];
-                fis.read(buf);
-                fis.close();
-                String xml = new String(buf, StandardCharsets.UTF_8);
-                Log.d(TAG, "XML read OK length=" + xml.length());
+                Log.d(TAG, "XML read OK, length=" + xmlContent.length());
 
-                // Échapper pour template literal JS
-                final String safe = xml
+                // Préparer pour injection JS (échapper backticks et $)
+                final String xmlEscaped = xmlContent
                     .replace("\\", "\\\\")
-                    .replace("`",  "\\`")
-                    .replace("$",  "\\$");
+                    .replace("`", "\\`")
+                    .replace("$", "\\$");
 
-                mainHandler.post(() -> navigateAndInject(safe));
+                mainHandler.post(() -> injectXmlIntoApp(xmlEscaped));
 
             } catch (Exception e) {
-                Log.e(TAG, "readXmlAndInject error", e);
+                Log.e(TAG, "Error reading XML", e);
                 mainHandler.post(() -> Toast.makeText(MainActivity.this,
-                    "Erreur lecture XML : " + e.getMessage(), Toast.LENGTH_LONG).show());
+                    "Erreur lecture : " + e.getMessage(), Toast.LENGTH_LONG).show());
             }
         }).start();
     }
 
-    // ── Naviguer vers la page principale et injecter le XML ──────────────────
-    private void navigateAndInject(String safeXml) {
-        xmlInjected = false;
-        Log.d(TAG, "Loading app page");
+    // ── Charger la page principale et injecter le XML ────────────────────────
+    private void injectXmlIntoApp(String xmlEscaped) {
+        Log.d(TAG, "Loading app page and injecting XML");
+
+        // Naviguer vers la page principale
         webView.loadUrl("file:///android_asset/index.html");
 
+        // Remplacer le WebViewClient temporairement pour détecter quand la page est prête
         webView.setWebViewClient(new WebViewClient() {
             @Override
-            public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest req) {
                 return false;
             }
 
             @Override
             public void onPageFinished(WebView view, String url) {
-                if (!url.contains("android_asset") || xmlInjected) return;
-                Log.d(TAG, "App page ready, injecting XML in 800ms");
+                Log.d(TAG, "Page finished: " + url);
+                if (!url.contains("android_asset")) return;
 
-                // Restaurer le client par défaut
-                webView.setWebViewClient(defaultClient());
+                // Rétablir le WebViewClient normal
+                webView.setWebViewClient(new WebViewClient() {
+                    @Override
+                    public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
+                        return false;
+                    }
+                });
 
+                // Délai court pour que le JS de la page soit bien initialisé
                 mainHandler.postDelayed(() -> {
-                    xmlInjected = true;
                     String js =
-                        "(function(){" +
-                        "try{" +
-                        "  var xml=`" + safeXml + "`;" +
-                        "  var evs=parseXML(xml);" +
-                        "  if(!evs||evs.length===0){" +
-                        "    Android.showToast('⚠️ Aucun événement trouvé');" +
-                        "    return;" +
+                        "(function() {" +
+                        "  try {" +
+                        "    var xml = `" + xmlEscaped + "`;" +
+                        "    var evs = parseXML(xml);" +
+                        "    if (!evs || evs.length === 0) {" +
+                        "      Android.showToast('⚠️ Aucun événement trouvé dans le XML');" +
+                        "      return;" +
+                        "    }" +
+                        "    events = evs;" +
+                        "    showPreview(evs);" +
+                        "    Android.onXmlLoaded(evs.length);" +
+                        "  } catch(e) {" +
+                        "    Android.showToast('❌ Erreur JS : ' + e.message);" +
                         "  }" +
-                        "  events=evs;" +
-                        "  showPreview(evs);" +
-                        "  Android.onXmlLoaded(evs.length);" +
-                        "}catch(e){" +
-                        "  Android.showToast('Erreur JS: '+e.message);" +
-                        "}" +
                         "})();";
 
-                    webView.evaluateJavascript(js, result ->
-                        Log.d(TAG, "JS result: " + result));
-                }, 800);
+                    webView.evaluateJavascript(js, value ->
+                        Log.d(TAG, "JS injection result: " + value));
+                }, 600);
             }
         });
     }
 
-    private WebViewClient defaultClient() {
-        return new WebViewClient() {
-            @Override
-            public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
-                return false;
-            }
-        };
-    }
-
-    // ── Lifecycle ─────────────────────────────────────────────────────────────
     @SuppressLint({"SetJavaScriptEnabled", "JavascriptInterface"})
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -206,12 +218,18 @@ public class MainActivity extends AppCompatActivity {
         webView = findViewById(R.id.webView);
         setupWebView();
 
-        // Si un XML en attente existe déjà au démarrage (ex: app re-ouverte), l'injecter
-        File pending = getXmlFile();
-        if (pending.exists() && !polling) {
-            Log.d(TAG, "Found pending XML on start, injecting");
-            mainHandler.postDelayed(() -> readXmlAndInject(), 1200);
+        IntentFilter filter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(downloadReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(downloadReceiver, filter);
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        try { unregisterReceiver(downloadReceiver); } catch (Exception ignored) {}
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -234,59 +252,52 @@ public class MainActivity extends AppCompatActivity {
             "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
 
         webView.addJavascriptInterface(new AndroidBridge(), "Android");
-        webView.setWebViewClient(defaultClient());
+
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                return false;
+            }
+        });
 
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
-            public boolean onShowFileChooser(WebView wv, ValueCallback<Uri[]> cb,
-                                             FileChooserParams p) {
-                filePathCallback = cb;
-                Intent i = new Intent(Intent.ACTION_GET_CONTENT);
-                i.setType("*/*");
-                i.putExtra(Intent.EXTRA_MIME_TYPES,
-                    new String[]{"text/xml","application/xml","*/*"});
-                filePickerLauncher.launch(Intent.createChooser(i, "Choisir XML"));
+            public boolean onShowFileChooser(WebView wv, ValueCallback<Uri[]> callback,
+                                             FileChooserParams params) {
+                filePathCallback = callback;
+                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.setType("*/*");
+                intent.putExtra(Intent.EXTRA_MIME_TYPES,
+                    new String[]{"text/xml", "application/xml", "*/*"});
+                filePickerLauncher.launch(Intent.createChooser(intent, "Choisir le fichier XML"));
                 return true;
             }
         });
 
-        // ── DownloadListener ─────────────────────────────────────────────────
-        webView.setDownloadListener((url, userAgent, contentDisposition, mimeType, length) -> {
+        webView.setDownloadListener((url, userAgent, contentDisposition, mimeType, contentLength) -> {
             try {
-                // Supprimer l'ancien XML s'il existe (évite conflit)
-                File old = getXmlFile();
-                if (old.exists()) old.delete();
-
-                // Télécharger dans le dossier privé de l'app avec nom fixe
-                File dest = getXmlFile();
-                Log.d(TAG, "Downloading to: " + dest.getAbsolutePath());
+                String filename = URLUtil.guessFileName(url, contentDisposition, mimeType);
+                Log.d(TAG, "Download triggered: " + filename + " mime=" + mimeType);
 
                 DownloadManager.Request req = new DownloadManager.Request(Uri.parse(url));
                 req.setMimeType(mimeType);
                 String cookies = CookieManager.getInstance().getCookie(url);
                 if (cookies != null) req.addRequestHeader("Cookie", cookies);
                 req.addRequestHeader("User-Agent", userAgent);
-                req.setTitle("Horaire TCS");
-                req.setDescription("Téléchargement en cours...");
-                // Dossier privé : pas de permission needed, pas visible dans Files
-                req.setDestinationUri(Uri.fromFile(dest));
+                req.setTitle(filename);
+                req.setDescription("Horaire TCS...");
                 req.setNotificationVisibility(
                     DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+                req.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, filename);
 
                 DownloadManager dm = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
-                pendingDownloadId = dm.enqueue(req);
-                polling = true;
-                xmlInjected = false;
+                lastDownloadId = dm.enqueue(req);
+                Log.d(TAG, "Download enqueued id=" + lastDownloadId);
 
-                Log.d(TAG, "Download enqueued id=" + pendingDownloadId);
                 Toast.makeText(this, "⬇️ Téléchargement en cours…", Toast.LENGTH_SHORT).show();
 
-                // Démarrer le polling
-                mainHandler.removeCallbacks(pollDownload);
-                mainHandler.postDelayed(pollDownload, 1500);
-
             } catch (Exception e) {
-                Log.e(TAG, "Download setup error", e);
+                Log.e(TAG, "Download error", e);
                 Toast.makeText(this, "Erreur : " + e.getMessage(), Toast.LENGTH_LONG).show();
             }
         });
@@ -300,30 +311,33 @@ public class MainActivity extends AppCompatActivity {
         else super.onBackPressed();
     }
 
-    // ── JavaScript Bridge ─────────────────────────────────────────────────────
+    // ── Bridge Android ↔ JavaScript ──────────────────────────────────────────
+
     public class AndroidBridge {
 
-        /** Appelé après injection réussie → supprimer le XML */
         @JavascriptInterface
         public void onXmlLoaded(int count) {
-            Log.d(TAG, "onXmlLoaded count=" + count);
-            mainHandler.post(() ->
-                Toast.makeText(MainActivity.this,
-                    "✅ " + count + " événements chargés !", Toast.LENGTH_SHORT).show());
-            deleteXml();
+            Log.d(TAG, "XML loaded, events=" + count);
+            mainHandler.post(() -> Toast.makeText(MainActivity.this,
+                "✅ " + count + " événements chargés !", Toast.LENGTH_SHORT).show());
+
+            // Supprimer le fichier XML
+            if (lastDownloadedPath != null) {
+                File f = new File(lastDownloadedPath);
+                if (f.exists()) {
+                    boolean ok = f.delete();
+                    Log.d(TAG, "XML deleted: " + ok + " path=" + lastDownloadedPath);
+                }
+                lastDownloadedPath = null;
+            }
         }
 
-        /** Appelé après export ICS → supprimer le XML si pas encore fait */
         @JavascriptInterface
         public void onIcsExported() {
-            deleteXml();
-        }
-
-        private void deleteXml() {
-            File f = getXmlFile();
-            if (f.exists()) {
-                boolean ok = f.delete();
-                Log.d(TAG, "XML deleted=" + ok);
+            // Sécurité : supprimer si pas encore fait
+            if (lastDownloadedPath != null) {
+                new File(lastDownloadedPath).delete();
+                lastDownloadedPath = null;
             }
         }
 
@@ -331,18 +345,19 @@ public class MainActivity extends AppCompatActivity {
         public void saveAndOpenICS(String icsContent, String filename, boolean openCal) {
             mainHandler.post(() -> {
                 try {
-                    File dir = new File(getCacheDir(), "ics");
-                    if (!dir.exists()) dir.mkdirs();
-                    File f = new File(dir, filename);
-                    try (FileOutputStream fos = new FileOutputStream(f)) {
+                    File cacheDir = new File(getCacheDir(), "ics");
+                    if (!cacheDir.exists()) cacheDir.mkdirs();
+                    File icsFile = new File(cacheDir, filename);
+                    try (FileOutputStream fos = new FileOutputStream(icsFile)) {
                         fos.write(icsContent.getBytes(StandardCharsets.UTF_8));
                     }
                     Uri uri = FileProvider.getUriForFile(
-                        MainActivity.this, getPackageName() + ".fileprovider", f);
+                        MainActivity.this, getPackageName() + ".fileprovider", icsFile);
 
                     Intent intent = openCal
                         ? new Intent(Intent.ACTION_VIEW)
                         : new Intent(Intent.ACTION_SEND);
+
                     if (openCal) {
                         intent.setDataAndType(uri, "text/calendar");
                     } else {
@@ -353,22 +368,22 @@ public class MainActivity extends AppCompatActivity {
                     intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION |
                                     Intent.FLAG_ACTIVITY_NEW_TASK);
                     startActivity(Intent.createChooser(intent,
-                        openCal ? "Ouvrir avec…" : "Partager…"));
+                        openCal ? "Ouvrir avec…" : "Partager le planning…"));
 
                 } catch (Exception e) {
                     Toast.makeText(MainActivity.this,
-                        "Erreur ICS : " + e.getMessage(), Toast.LENGTH_LONG).show();
+                        "Erreur : " + e.getMessage(), Toast.LENGTH_LONG).show();
                 }
             });
         }
 
         @JavascriptInterface
-        public void showToast(String msg) {
+        public void showToast(String message) {
             mainHandler.post(() ->
-                Toast.makeText(MainActivity.this, msg, Toast.LENGTH_LONG).show());
+                Toast.makeText(MainActivity.this, message, Toast.LENGTH_LONG).show());
         }
 
         @JavascriptInterface
-        public String getAppVersion() { return "1.5"; }
+        public String getAppVersion() { return "1.3"; }
     }
 }
