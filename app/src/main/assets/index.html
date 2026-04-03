@@ -154,9 +154,12 @@
         <div class="brand-sub">eqso.be · planning</div>
       </div>
     </div>
-    <div class="month-pill">
-      <div class="mo" id="moLbl">—</div>
-      <div class="yr" id="yrLbl">—</div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="month-pill">
+        <div class="mo" id="moLbl">—</div>
+        <div class="yr" id="yrLbl">—</div>
+      </div>
+      <button class="gear-btn" onclick="openSettings()" title="Paramètres">⚙️</button>
     </div>
   </div>
 
@@ -239,6 +242,47 @@
   </div>
 </div>
 
+
+<!-- PANNEAU PARAMÈTRES -->
+<div class="settings-panel" id="settingsPanel">
+  <div class="s-hdr">
+    <button class="btn-x" onclick="closeSettings()">✕</button>
+    <div class="s-title">Paramètres</div>
+  </div>
+  <div class="s-scroll">
+    <div class="s-section">Connexion automatique TCS</div>
+    <div class="s-card">
+      <div class="s-field">
+        <label class="s-label">Identifiant (nom d'utilisateur)</label>
+        <input class="s-input" type="text" id="credUser" placeholder="ex: jdupont"
+          autocomplete="username" autocorrect="off" autocapitalize="none" spellcheck="false">
+      </div>
+      <div class="s-field">
+        <label class="s-label">Mot de passe</label>
+        <input class="s-input" type="password" id="credPass" placeholder="••••••••"
+          autocomplete="current-password">
+      </div>
+      <div class="toggle-wrap" style="margin-top:12px">
+        <span class="toggle-lbl">Connexion automatique</span>
+        <label class="sw">
+          <input type="checkbox" id="autoLoginToggle">
+          <div class="sw-track"></div>
+        </label>
+      </div>
+      <div class="s-hint">
+        ⚠️ Les identifiants sont stockés localement sur votre appareil uniquement,
+        dans le stockage sécurisé de l'application.
+      </div>
+    </div>
+    <button class="btn btn-blue" onclick="saveCredentials()" style="margin-bottom:16px">
+      💾 Sauvegarder
+    </button>
+    <button class="btn btn-ghost" onclick="clearCredentials()">
+      🗑️ Effacer les identifiants
+    </button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -274,7 +318,99 @@ function switchTab(mode){
 }
 
 // ── WebView TCS ──────────────────────────────────────────────────
+
+// ── PARAMÈTRES & AUTOLOGIN ────────────────────────────────────────────────────
+const CRED_KEY_USER = 'tcs_user';
+const CRED_KEY_PASS = 'tcs_pass';
+const CRED_KEY_AUTO = 'tcs_auto';
+
+function openSettings(){
+  // Charger les valeurs sauvegardées
+  $("credUser").value = localStorage.getItem(CRED_KEY_USER)||"";
+  $("credPass").value = localStorage.getItem(CRED_KEY_PASS)||"";
+  $("autoLoginToggle").checked = localStorage.getItem(CRED_KEY_AUTO)==="1";
+  $("settingsPanel").classList.add("open");
+}
+function closeSettings(){
+  $("settingsPanel").classList.remove("open");
+}
+function saveCredentials(){
+  const u=$("credUser").value.trim();
+  const p=$("credPass").value;
+  const a=$("autoLoginToggle").checked;
+  localStorage.setItem(CRED_KEY_USER, u);
+  localStorage.setItem(CRED_KEY_PASS, p);
+  localStorage.setItem(CRED_KEY_AUTO, a?"1":"0");
+  closeSettings();
+  toast("✅ Identifiants sauvegardés","ok");
+}
+function clearCredentials(){
+  localStorage.removeItem(CRED_KEY_USER);
+  localStorage.removeItem(CRED_KEY_PASS);
+  localStorage.removeItem(CRED_KEY_AUTO);
+  $("credUser").value="";
+  $("credPass").value="";
+  $("autoLoginToggle").checked=false;
+  toast("🗑️ Identifiants effacés","ok");
+}
+
+// Script d'autologin injecté dans la WebView TCS
+function buildAutoLoginScript(user, pass){
+  // On attend que la page soit chargée, puis on cherche les champs login
+  // et on les remplit + soumet automatiquement
+  return `
+    (function autoLogin(){
+      var user=${JSON.stringify(user)};
+      var pass=${JSON.stringify(pass)};
+      function tryFill(){
+        // Chercher les champs — WinDev utilise souvent ces noms
+        var uField = document.querySelector(
+          'input[name*="user"],input[name*="User"],input[name*="login"],input[name*="Login"],' +
+          'input[id*="user"],input[id*="User"],input[id*="login"],input[id*="Login"],' +
+          'input[type="text"]:not([readonly])');
+        var pField = document.querySelector(
+          'input[type="password"]');
+        if(uField && pField){
+          uField.value=user;
+          pField.value=pass;
+          uField.dispatchEvent(new Event('input',{bubbles:true}));
+          uField.dispatchEvent(new Event('change',{bubbles:true}));
+          pField.dispatchEvent(new Event('input',{bubbles:true}));
+          pField.dispatchEvent(new Event('change',{bubbles:true}));
+          // Chercher le bouton de connexion
+          var btn = document.querySelector(
+            'button[type="submit"],input[type="submit"],' +
+            'button[id*="login"],button[id*="connect"],button[id*="Login"],' +
+            'button[onclick*="login"],button[onclick*="Login"]');
+          if(btn){ setTimeout(()=>btn.click(),300); }
+          else {
+            // Tenter la soumission du formulaire
+            var form=uField.closest("form");
+            if(form) setTimeout(()=>form.submit(),300);
+          }
+        } else {
+          // Réessayer dans 500ms si la page n'est pas encore prête
+          setTimeout(tryFill,500);
+        }
+      }
+      if(document.readyState==="loading"){
+        document.addEventListener("DOMContentLoaded",tryFill);
+      } else {
+        setTimeout(tryFill,300);
+      }
+    })();
+  `;
+}
 function openTCS(){
+  var autoLogin = localStorage.getItem(CRED_KEY_AUTO)==="1";
+  var user = localStorage.getItem(CRED_KEY_USER)||"";
+  var pass = localStorage.getItem(CRED_KEY_PASS)||"";
+  if(autoLogin && user && pass){
+    // Passer les credentials au bridge Android pour injection post-load
+    if(window.Android && window.Android.setAutoLoginCredentials){
+      window.Android.setAutoLoginCredentials(user, pass);
+    }
+  }
   $("wvFrame").src="https://tcs.eqso.be/RHTime";
   $("wvPanel").classList.add("open");
   if(window.Android && window.Android.notifyWebViewOpen) window.Android.notifyWebViewOpen();

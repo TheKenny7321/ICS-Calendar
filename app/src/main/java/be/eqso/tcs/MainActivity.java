@@ -40,8 +40,9 @@ public class MainActivity extends AppCompatActivity {
     private ValueCallback<Uri[]> filePathCallback;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
-    // Cookies de session TCS (capturés depuis la WebView)
-    private String sessionCookies = "";
+    // Credentials autologin (passés depuis le JS)
+    private String autoLoginUser = null;
+    private String autoLoginPass = null;
 
     // ── File picker manuel ────────────────────────────────────────────────────
     private final ActivityResultLauncher<Intent> filePickerLauncher =
@@ -166,6 +167,50 @@ public class MainActivity extends AppCompatActivity {
             public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
                 return false;
             }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                // Injecter l'autologin uniquement sur la page de login TCS
+                // (pas sur index.html ni sur les pages déjà connectées)
+                if (autoLoginUser != null && autoLoginPass != null
+                        && url.contains("tcs.eqso.be")
+                        && !url.contains("RHTime/RHTIME_Planning")) {
+
+                    Log.d(TAG, "Injecting autologin on: " + url);
+
+                    // Échapper les valeurs pour JS
+                    String safeUser = autoLoginUser.replace("\\", "\\\\").replace("'", "\\'");
+                    String safePass = autoLoginPass.replace("\\", "\\\\").replace("'", "\\'");
+
+                    String js =
+                        "(function(){" +
+                        "  function tryFill(){" +
+                        "    var u=document.querySelector(" +
+                        "      'input[type=text]:not([readonly]),input[type=email]," +
+                        "       input[name*=user i],input[name*=login i],input[id*=user i],input[id*=login i]');" +
+                        "    var p=document.querySelector('input[type=password]');" +
+                        "    if(u&&p){" +
+                        "      u.value='" + safeUser + "';" +
+                        "      p.value='" + safePass + "';" +
+                        "      ['input','change'].forEach(function(ev){" +
+                        "        u.dispatchEvent(new Event(ev,{bubbles:true}));" +
+                        "        p.dispatchEvent(new Event(ev,{bubbles:true}));" +
+                        "      });" +
+                        "      var btn=document.querySelector(" +
+                        "        'button[type=submit],input[type=submit]," +
+                        "         button[id*=login i],button[id*=connect i],button[id*=valider i]');" +
+                        "      if(btn){setTimeout(function(){btn.click();},400);}" +
+                        "      else{var f=u.closest('form');if(f)setTimeout(function(){f.submit();},400);}" +
+                        "    } else { setTimeout(tryFill,500); }" +
+                        "  }" +
+                        "  setTimeout(tryFill,500);" +
+                        "})();";
+
+                    mainHandler.postDelayed(() ->
+                        view.evaluateJavascript(js, res -> Log.d(TAG, "AutoLogin JS: " + res)),
+                        500);
+                }
+            }
         };
     }
 
@@ -287,6 +332,13 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @JavascriptInterface
-        public String getAppVersion() { return "1.9"; }
+        public void setAutoLoginCredentials(String user, String pass) {
+            autoLoginUser = user;
+            autoLoginPass = pass;
+            Log.d(TAG, "AutoLogin credentials set for user: " + user);
+        }
+
+        @JavascriptInterface
+        public String getAppVersion() { return "2.0"; }
     }
 }
