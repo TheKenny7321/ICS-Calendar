@@ -182,28 +182,56 @@ public class MainActivity extends AppCompatActivity {
                     String safeUser = autoLoginUser.replace("\\", "\\\\").replace("'", "\\'");
                     String safePass = autoLoginPass.replace("\\", "\\\\").replace("'", "\\'");
 
+                    // Script universel : trouve tous les inputs visibles,
+                    // le 1er text = login, le 1er password = mdp, puis cherche le bouton submit
                     String js =
                         "(function(){" +
-                        "  function tryFill(){" +
-                        "    var u=document.querySelector(" +
-                        "      'input[type=text]:not([readonly]),input[type=email]," +
-                        "       input[name*=user i],input[name*=login i],input[id*=user i],input[id*=login i]');" +
-                        "    var p=document.querySelector('input[type=password]');" +
-                        "    if(u&&p){" +
-                        "      u.value='" + safeUser + "';" +
-                        "      p.value='" + safePass + "';" +
-                        "      ['input','change'].forEach(function(ev){" +
-                        "        u.dispatchEvent(new Event(ev,{bubbles:true}));" +
-                        "        p.dispatchEvent(new Event(ev,{bubbles:true}));" +
-                        "      });" +
-                        "      var btn=document.querySelector(" +
-                        "        'button[type=submit],input[type=submit]," +
-                        "         button[id*=login i],button[id*=connect i],button[id*=valider i]');" +
-                        "      if(btn){setTimeout(function(){btn.click();},400);}" +
-                        "      else{var f=u.closest('form');if(f)setTimeout(function(){f.submit();},400);}" +
-                        "    } else { setTimeout(tryFill,500); }" +
+                        "var MAX=10,tries=0;" +
+                        "function fill(){" +
+                        "  tries++;" +
+                        // Tous les inputs texte visibles non désactivés
+                        "  var all=[].slice.call(document.querySelectorAll('input'));" +
+                        "  var texts=all.filter(function(i){" +
+                        "    return (i.type==='text'||i.type==='email'||i.type==='')" +
+                        "      &&!i.disabled&&!i.readOnly" +
+                        "      &&i.offsetParent!==null;" +  // visible
+                        "  });" +
+                        "  var passes=all.filter(function(i){" +
+                        "    return i.type==='password'&&!i.disabled&&i.offsetParent!==null;" +
+                        "  });" +
+                        "  if(texts.length===0||passes.length===0){" +
+                        "    if(tries<MAX)setTimeout(fill,600);" +
+                        "    return;" +
                         "  }" +
-                        "  setTimeout(tryFill,500);" +
+                        "  var u=texts[0],p=passes[0];" +
+                        "  u.value='" + safeUser + "';" +
+                        "  p.value='" + safePass + "';" +
+                        // Déclencher les événements pour que WinDev détecte le changement
+                        "  ['input','change','keyup','blur'].forEach(function(ev){" +
+                        "    u.dispatchEvent(new Event(ev,{bubbles:true}));" +
+                        "    p.dispatchEvent(new Event(ev,{bubbles:true}));" +
+                        "  });" +
+                        // Chercher le bouton submit
+                        "  var btn=document.querySelector(" +
+                        "    'input[type=submit],button[type=submit]');" +
+                        "  if(!btn){" +
+                        // Fallback : chercher un élément cliquable contenant "connect" ou "login"
+                        "    var elems=[].slice.call(document.querySelectorAll('a,button,input[type=button],[onclick]'));" +
+                        "    btn=elems.find(function(e){" +
+                        "      var t=(e.textContent||e.value||'').toLowerCase();" +
+                        "      return t.indexOf('connect')>=0||t.indexOf('login')>=0" +
+                        "        ||t.indexOf('valider')>=0||t.indexOf('ok')===t.trim().length-2;" +
+                        "    })||null;" +
+                        "  }" +
+                        "  if(btn){" +
+                        "    setTimeout(function(){btn.click();},500);" +
+                        "  } else {" +
+                        // Dernier recours : soumettre le formulaire parent
+                        "    var f=u.closest('form');" +
+                        "    if(f)setTimeout(function(){f.submit();},500);" +
+                        "  }" +
+                        "}" +
+                        "setTimeout(fill,800);" +
                         "})();";
 
                     mainHandler.postDelayed(() ->
