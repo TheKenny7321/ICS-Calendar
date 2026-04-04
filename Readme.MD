@@ -35,13 +35,28 @@ L'application n'étant pas sur le Play Store, voici la marche à suivre :
 
 L'application facilite la récupération de votre planning via un navigateur intégré.
 
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/be867b80-9c06-4a0a-a835-a1df08100592" width="300">
+</p>
+
+
+
 ### Étape 1 : Configuration (Optionnel mais recommandé)
 Pour gagner du temps, allez dans les **Paramètres** de l'application et enregistrez vos identifiants RHTime. L'application vous connectera automatiquement lors de vos prochaines sessions.
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/ebc2935a-46a3-4f22-a1e4-c69e13d8ef35" width="300">
+</p>
 
 ### Étape 2 : Récupérer l'horaire
 1. Lancez la connexion à RHTime depuis l'écran principal de l'application.
 2. Une fois sur votre grille horaire, effectuez un **appui long n'importe où sur l'écran**.
 3. Dans le menu qui s'affiche, sélectionnez **"Exporter en XML"**.
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/10235d0c-6b5b-4ee4-89e2-3042710c05fa" width="300">
+</p>
+
 
 ### Étape 3 : Conversion et Action
 Dès que vous avez cliqué sur "Exporter", l'application prend le relais :
@@ -49,6 +64,11 @@ Dès que vous avez cliqué sur "Exporter", l'application prend le relais :
 * Vous arrivez alors sur l'écran final vous proposant :
     * **Ouverture instantanée** : Pour ajouter les horaires dans votre calendrier système (Google, Outlook, etc.).
     * **Option de partage** : Pour envoyer le fichier `.ics` via WhatsApp, Email ou le sauvegarder sur votre Cloud.
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/df7636f8-eb5f-4d9f-983d-eae920495d7c" width="300">
+</p>
+
 
 ---
 
@@ -59,6 +79,11 @@ Si vous possédez déjà un fichier `.xml` exporté manuellement de RHTime :
 1. Cliquez sur **"Importer un fichier local"** sur l'écran d'accueil.
 2. Sélectionnez votre fichier dans le dossier "Téléchargements".
 3. L'application traitera le fichier exactement comme s'il sortait du navigateur intégré.
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/34d4791b-d9c6-4431-8f2c-63aac14d218d" width="300">
+</p>
+
 
 ---
 
