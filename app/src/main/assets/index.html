@@ -14,15 +14,12 @@
     }
     *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
     html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
-      font-family:-apple-system,'Segoe UI',sans-serif}
-    body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
+      font-family:-apple-system,"Segoe UI",sans-serif}
+    body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
       background-image:linear-gradient(rgba(37,99,235,.03) 1px,transparent 1px),
       linear-gradient(90deg,rgba(37,99,235,.03) 1px,transparent 1px);
       background-size:28px 28px}
-
     .app{height:100%;display:flex;flex-direction:column}
-
-    /* HEADER */
     .hdr{padding:16px 20px 0;flex-shrink:0;display:flex;align-items:center;justify-content:space-between}
     .brand{display:flex;align-items:center;gap:10px}
     .brand-ico{width:40px;height:40px;border-radius:11px;flex-shrink:0;
@@ -33,40 +30,39 @@
       background:linear-gradient(90deg,#fff,var(--cyan));
       -webkit-background-clip:text;-webkit-text-fill-color:transparent}
     .brand-sub{font-size:10px;color:var(--muted);margin-top:1px}
+    .hdr-right{display:flex;align-items:center;gap:8px}
     .month-pill{background:var(--surf2);border:1px solid var(--brd);
-      border-radius:10px;padding:6px 12px;text-align:right;flex-shrink:0}
+      border-radius:10px;padding:6px 12px;text-align:right}
     .month-pill .mo{font-size:12px;font-weight:700}
     .month-pill .yr{font-size:10px;color:var(--muted)}
-
-    /* TABS */
+    .settings-btn{width:36px;height:36px;border-radius:10px;border:1px solid var(--brd);
+      background:var(--surf2);cursor:pointer;
+      display:flex;align-items:center;justify-content:center;
+      flex-shrink:0;transition:border-color .2s,background .2s;padding:0}
+    .settings-btn:active{background:var(--surf);border-color:var(--bluL)}
+    .settings-btn svg{width:18px;height:18px;stroke:var(--muted);fill:none;
+      stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
     .tabs{display:flex;gap:6px;padding:14px 20px 0;flex-shrink:0}
     .itab{flex:1;padding:9px 4px;border-radius:10px;border:1px solid var(--brd);
       background:var(--surf);font-size:12px;font-weight:700;color:var(--muted);
       cursor:pointer;text-align:center;transition:all .2s}
     .itab.active{background:#122044;border-color:var(--bluL);color:var(--text)}
-
-    /* SCROLL */
     .scroll{flex:1;overflow-y:auto;padding:14px 20px;
       padding-bottom:100px;-webkit-overflow-scrolling:touch}
-
-    /* CARDS */
     .card{background:var(--surf);border:1px solid var(--brd);border-radius:var(--r);
-      padding:16px 18px;margin-bottom:10px;position:relative;overflow:hidden;transition:border-color .2s}
-    .card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
+      padding:16px 18px;margin-bottom:10px;position:relative;overflow:hidden}
+    .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
       background:var(--brd);transition:background .3s}
     .card.active::before{background:var(--bluL)}
     .card.done::before{background:var(--ok)}
     .card.active{border-color:#1a3060}
     .c-hdr{display:flex;align-items:center;gap:10px;margin-bottom:10px}
     .step-n{width:26px;height:26px;border-radius:50%;flex-shrink:0;background:var(--brd);
-      display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;
-      color:var(--muted);transition:all .3s}
+      display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--muted)}
     .card.active .step-n{background:var(--blue);color:#fff}
     .card.done .step-n{background:var(--ok);color:#fff}
     .c-title{font-size:13px;font-weight:700}
     .c-desc{font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:12px}
-
-    /* BUTTONS */
     .btn{display:flex;align-items:center;justify-content:center;gap:8px;
       width:100%;padding:13px;border-radius:11px;border:none;cursor:pointer;
       font-size:13px;font-weight:700;transition:all .15s}
@@ -78,34 +74,12 @@
     .btn-ok{background:linear-gradient(135deg,var(--ok),#059669);color:#fff;
       box-shadow:0 4px 18px rgba(16,185,129,.3)}
     .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--brd)}
-
-    /* WEBVIEW PANEL */
-    .wv-panel{position:fixed;inset:0;z-index:999;background:var(--bg);
-      display:flex;flex-direction:column;
-      transform:translateY(100%);transition:transform .35s cubic-bezier(.16,1,.3,1)}
-    .wv-panel.open{transform:translateY(0)}
-    .wv-hdr{display:flex;align-items:center;gap:10px;
-      padding:14px 18px;background:var(--surf);border-bottom:1px solid var(--brd);flex-shrink:0}
-    .wv-title{flex:1;font-size:13px;font-weight:700}
-    .wv-url{font-size:10px;color:var(--muted);margin-top:2px;
-      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px}
-    .btn-x{background:var(--brd);border:none;color:var(--text);
-      width:30px;height:30px;border-radius:7px;cursor:pointer;
-      display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
-    .wv-frame{flex:1;border:none;background:#fff;width:100%}
-    .wv-tip{padding:10px 18px;background:var(--surf);border-top:1px solid var(--brd);
-      flex-shrink:0;font-size:10px;color:var(--muted);text-align:center;line-height:1.6}
-    .wv-tip strong{color:var(--cyan)}
-
-    /* DROP */
+    .btn-danger{background:transparent;color:var(--err);border:1px solid rgba(239,68,68,.3)}
     .drop{border:2px dashed var(--brd);border-radius:11px;padding:24px 16px;
-      text-align:center;cursor:pointer;color:var(--muted);transition:all .2s}
-    .drop.hi{border-color:var(--bluL);background:rgba(59,130,246,.06);color:var(--bluL)}
+      text-align:center;cursor:pointer;color:var(--muted)}
     .drop-ico{font-size:28px;margin-bottom:6px}
     .drop-txt{font-size:12px;line-height:1.6}
     .drop-hint{font-size:10px;color:var(--bluL);font-weight:700;margin-top:3px}
-
-    /* PREVIEW */
     .ev-box{background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);
       border-radius:11px;padding:12px 16px;margin-bottom:10px}
     .ev-count{font-size:30px;font-weight:800;color:var(--ok);line-height:1}
@@ -115,27 +89,63 @@
     .ev-item{display:flex;align-items:center;gap:8px;padding:6px 0;
       border-bottom:1px solid var(--brd);font-size:11px}
     .ev-item:last-child{border-bottom:none}
-    .ev-date{color:var(--muted);width:52px;flex-shrink:0;font-variant-numeric:tabular-nums}
+    .ev-date{color:var(--muted);width:52px;flex-shrink:0}
     .ev-code{color:var(--cyan);font-weight:700;width:42px;flex-shrink:0}
     .ev-time{color:var(--text);flex:1}
     .ev-loc{color:var(--muted);font-size:10px;max-width:90px;
       white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-
-    /* PROGRESS */
     .prog{margin-bottom:10px}
     .prog-bg{background:var(--brd);border-radius:99px;height:4px;overflow:hidden;margin-bottom:5px}
     .prog-fill{height:100%;border-radius:99px;
-      background:linear-gradient(90deg,var(--blue),var(--cyan));
-      transition:width .4s ease;width:0%}
+      background:linear-gradient(90deg,var(--blue),var(--cyan));transition:width .4s ease;width:0%}
     .prog-msg{font-size:10px;color:var(--muted)}
-
-    /* BOTTOM */
     .bot{position:fixed;bottom:0;left:0;right:0;
       background:rgba(10,15,30,.97);backdrop-filter:blur(20px);
-      border-top:1px solid var(--brd);padding:10px 20px 20px;
-      display:flex;gap:8px}
-
-    /* TOAST */
+      border-top:1px solid var(--brd);padding:10px 20px 20px;display:flex;gap:8px}
+    .wv-panel,.s-panel{position:fixed;inset:0;background:var(--bg);
+      display:flex;flex-direction:column}
+    .wv-panel{z-index:500;transform:translateY(100%);transition:transform .35s cubic-bezier(.16,1,.3,1)}
+    .s-panel{z-index:600;transform:translateX(100%);transition:transform .3s cubic-bezier(.16,1,.3,1)}
+    .wv-panel.open,.s-panel.open{transform:none}
+    .wv-hdr,.s-hdr{display:flex;align-items:center;gap:12px;
+      padding:16px 18px;background:var(--surf);border-bottom:1px solid var(--brd);flex-shrink:0}
+    .wv-title{flex:1}
+    .wv-title b{font-size:13px;display:block}
+    .wv-title span{font-size:10px;color:var(--muted)}
+    .s-hdr-title{flex:1;font-size:15px;font-weight:700}
+    .btn-x{background:var(--brd);border:none;color:var(--text);
+      width:30px;height:30px;border-radius:7px;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+    .wv-frame{flex:1;border:none;background:#fff;width:100%}
+    .wv-tip{padding:10px 18px 16px;background:var(--surf);border-top:1px solid var(--brd);
+      flex-shrink:0;font-size:10px;color:var(--muted);text-align:center;line-height:1.6}
+    .wv-tip strong{color:var(--cyan)}
+    .s-scroll{flex:1;overflow-y:auto;padding:20px 18px}
+    .s-section{font-size:10px;font-weight:700;text-transform:uppercase;
+      letter-spacing:.08em;color:var(--muted);margin:0 0 10px}
+    .s-card{background:var(--surf);border:1px solid var(--brd);border-radius:12px;
+      padding:16px;margin-bottom:16px}
+    .s-field{margin-bottom:12px}
+    .s-label{font-size:11px;color:var(--muted);margin-bottom:5px;display:block;font-weight:600}
+    .s-input{width:100%;background:var(--surf2);border:1px solid var(--brd);
+      border-radius:8px;padding:11px 12px;color:var(--text);font-size:13px;
+      outline:none;-webkit-appearance:none;transition:border-color .2s}
+    .s-input:focus{border-color:var(--bluL)}
+    .s-hint{font-size:10px;color:var(--muted);margin-top:10px;line-height:1.6;
+      background:rgba(37,99,235,.06);border-radius:8px;padding:8px 10px}
+    .toggle-row{display:flex;align-items:center;justify-content:space-between;
+      padding:11px 0;border-top:1px solid var(--brd);margin-top:12px}
+    .toggle-lbl{font-size:13px;color:var(--text);font-weight:600}
+    .toggle-sub{font-size:10px;color:var(--muted);margin-top:2px}
+    .sw{position:relative;width:44px;height:24px;flex-shrink:0}
+    .sw input{display:none}
+    .sw-track{position:absolute;inset:0;background:var(--brd);border-radius:99px;
+      cursor:pointer;transition:background .2s}
+    .sw-track::after{content:"";position:absolute;width:18px;height:18px;
+      background:#fff;border-radius:50%;top:3px;left:3px;transition:transform .2s;
+      box-shadow:0 1px 3px rgba(0,0,0,.3)}
+    .sw input:checked+.sw-track{background:var(--bluL)}
+    .sw input:checked+.sw-track::after{transform:translateX(20px)}
     .toast{position:fixed;top:16px;left:16px;right:16px;
       background:#1a2740;border-radius:11px;padding:11px 14px;
       font-size:12px;border-left:3px solid var(--ok);color:var(--text);
@@ -145,51 +155,46 @@
 </head>
 <body>
 <div class="app">
-
   <div class="hdr">
     <div class="brand">
-      <div class="brand-ico">📅</div>
+      <div class="brand-ico">&#128197;</div>
       <div>
-        <div class="brand-name">TCS→ICS</div>
-        <div class="brand-sub">eqso.be · planning</div>
+        <div class="brand-name">TCS&#8594;ICS</div>
+        <div class="brand-sub">eqso.be &middot; planning</div>
       </div>
     </div>
-    <div style="display:flex;align-items:center;gap:8px">
+    <div class="hdr-right">
       <div class="month-pill">
-        <div class="mo" id="moLbl">—</div>
-        <div class="yr" id="yrLbl">—</div>
+        <div class="mo" id="moLbl">&#8212;</div>
+        <div class="yr" id="yrLbl">&#8212;</div>
       </div>
-      <button class="gear-btn" onclick="openSettings()" title="Paramètres">⚙️</button>
+      <button class="settings-btn" id="settingsBtn">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+        </svg>
+      </button>
     </div>
   </div>
 
-  <!-- Onglets import -->
   <div class="tabs">
-    <div class="itab active" id="itab-site" onclick="switchTab('site')">🌐 Depuis le site</div>
-    <div class="itab"        id="itab-file" onclick="switchTab('file')">📂 Fichier local</div>
+    <div class="itab active" id="itab-site" onclick="switchTab('site')">&#127760; Depuis le site</div>
+    <div class="itab"        id="itab-file" onclick="switchTab('file')">&#128194; Fichier local</div>
   </div>
 
   <div class="scroll">
     <div class="card active" id="card1" style="margin-top:14px">
       <div class="c-hdr"><div class="step-n">1</div><div class="c-title">Importer le planning</div></div>
-
-      <!-- Panneau site TCS -->
       <div id="pane-site">
-        <p class="c-desc">Connectez-vous sur le site TCS, naviguez vers votre planning, puis faites <strong>clic long → Exporter en XML</strong>. Revenez ici et choisissez le fichier téléchargé.</p>
-        <button class="btn btn-blue" onclick="openTCS()">
-          🌐 Ouvrir tcs.eqso.be
-        </button>
-        <button class="btn btn-ghost" style="margin-top:8px" onclick="pickFile('site')">
-          📂 Choisir le fichier XML exporté
-        </button>
+        <p class="c-desc">Connectez-vous sur le site TCS, naviguez vers votre planning, puis faites <strong>clic long &#8594; Exporter en XML</strong>.</p>
+        <button class="btn btn-blue" onclick="openTCS()">&#127760; Ouvrir tcs.eqso.be</button>
+        <button class="btn btn-ghost" style="margin-top:8px" onclick="pickFile('site')">&#128194; Choisir le fichier XML</button>
         <input type="file" id="fi-site" accept=".xml,text/xml,application/xml" style="display:none">
       </div>
-
-      <!-- Panneau fichier local -->
       <div id="pane-file" class="hidden">
-        <p class="c-desc">Sélectionnez un fichier XML TCS déjà présent sur votre appareil.</p>
+        <p class="c-desc">S&#233;lectionnez un fichier XML TCS d&#233;j&#224; pr&#233;sent sur votre appareil.</p>
         <div class="drop" id="dropZone" onclick="pickFile('file')">
-          <div class="drop-ico">📂</div>
+          <div class="drop-ico">&#128194;</div>
           <div class="drop-txt">Appuyez pour choisir</div>
           <div class="drop-hint">fichier export.xml</div>
         </div>
@@ -197,381 +202,283 @@
       </div>
     </div>
 
-    <!-- Aperçu -->
     <div class="card hidden" id="card2">
-      <div class="c-hdr"><div class="step-n">2</div><div class="c-title">Aperçu du planning</div></div>
+      <div class="c-hdr"><div class="step-n">2</div><div class="c-title">Aper&#231;u du planning</div></div>
       <div class="ev-box">
         <div class="ev-count" id="evCount">0</div>
-        <div class="ev-lbl">JOURS TRAVAILLÉS</div>
-        <div class="ev-month" id="evMonth">—</div>
+        <div class="ev-lbl">JOURS TRAVAILL&#201;S</div>
+        <div class="ev-month" id="evMonth">&#8212;</div>
       </div>
       <div class="ev-list" id="evList"></div>
       <div class="prog hidden" id="progWrap">
         <div class="prog-bg"><div class="prog-fill" id="progFill"></div></div>
-        <div class="prog-msg" id="progMsg">Génération…</div>
+        <div class="prog-msg" id="progMsg">G&#233;n&#233;ration&#8230;</div>
       </div>
     </div>
   </div>
 
   <div class="bot">
-    <button class="btn btn-ghost" onclick="reset()" style="width:auto;padding:13px 14px">↺</button>
+    <button class="btn btn-ghost" onclick="reset()" style="width:auto;padding:13px 14px">&#8634;</button>
     <button class="btn btn-ok" id="btnCal" disabled style="flex:1" onclick="exportICS(true)">
-      📅 Ouvrir le .ics avec…
+      &#128197; Ouvrir le .ics avec&#8230;
     </button>
     <button class="btn btn-ghost" id="btnShare" disabled style="width:auto;padding:13px 14px" onclick="exportICS(false)">
-      ↑
+      &#8593;
     </button>
   </div>
 </div>
 
-<!-- WebView panel TCS -->
+<!-- PANEL WEBVIEW TCS -->
 <div class="wv-panel" id="wvPanel">
   <div class="wv-hdr">
-    <button class="btn-x" onclick="closeWV()">✕</button>
-    <div>
-      <div class="wv-title">TCS — RHTime Planning</div>
-      <div class="wv-url">https://tcs.eqso.be/RHTime</div>
+    <button class="btn-x" onclick="closeWV()">&#10005;</button>
+    <div class="wv-title">
+      <b>TCS &#8212; RHTime Planning</b>
+      <span>https://tcs.eqso.be/RHTime</span>
     </div>
   </div>
   <iframe class="wv-frame" id="wvFrame" src="about:blank"
     sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-downloads"
     allow="downloads"></iframe>
-  <div class="wv-tip">
-    Connectez-vous → planning →<br>
-    <strong>clic long → Exporter XML</strong> → puis fermez et choisissez le fichier
-  </div>
+  <div class="wv-tip">Connectez-vous &#8594; planning &#8594; <strong>clic long &#8594; Exporter XML</strong></div>
 </div>
 
-
-<!-- PANNEAU PARAMÈTRES -->
-<div class="settings-panel" id="settingsPanel">
+<!-- PANEL PARAMETRES -->
+<div class="s-panel" id="sPanel">
   <div class="s-hdr">
-    <button class="btn-x" onclick="closeSettings()">✕</button>
-    <div class="s-title">Paramètres</div>
+    <button class="btn-x" onclick="closeSettings()">&#10005;</button>
+    <div class="s-hdr-title">Param&#232;tres</div>
   </div>
   <div class="s-scroll">
     <div class="s-section">Connexion automatique TCS</div>
     <div class="s-card">
       <div class="s-field">
-        <label class="s-label">Identifiant (nom d'utilisateur)</label>
+        <label class="s-label">Identifiant</label>
         <input class="s-input" type="text" id="credUser" placeholder="ex: jdupont"
           autocomplete="username" autocorrect="off" autocapitalize="none" spellcheck="false">
       </div>
       <div class="s-field">
         <label class="s-label">Mot de passe</label>
-        <input class="s-input" type="password" id="credPass" placeholder="••••••••"
+        <input class="s-input" type="password" id="credPass" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;"
           autocomplete="current-password">
       </div>
-      <div class="toggle-wrap" style="margin-top:12px">
-        <span class="toggle-lbl">Connexion automatique</span>
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-lbl">Connexion automatique</div>
+          <div class="toggle-sub">Remplir et soumettre le formulaire</div>
+        </div>
         <label class="sw">
           <input type="checkbox" id="autoLoginToggle">
           <div class="sw-track"></div>
         </label>
       </div>
       <div class="s-hint">
-        ⚠️ Les identifiants sont stockés localement sur votre appareil uniquement,
-        dans le stockage sécurisé de l'application.
+        &#128274; Identifiants stock&#233;s uniquement sur cet appareil.
       </div>
     </div>
-    <button class="btn btn-blue" onclick="saveCredentials()" style="margin-bottom:16px">
-      💾 Sauvegarder
-    </button>
-    <button class="btn btn-ghost" onclick="clearCredentials()">
-      🗑️ Effacer les identifiants
-    </button>
+    <button class="btn btn-blue" onclick="saveCredentials()">&#128190; Sauvegarder</button>
+    <button class="btn btn-danger" style="margin-top:8px" onclick="clearCredentials()">&#128465; Effacer les identifiants</button>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
-const MOIS=["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
-let events=[];
+var MOIS=["Janvier","F\u00e9vrier","Mars","Avril","Mai","Juin","Juillet","Ao\u00fbt","Septembre","Octobre","Novembre","D\u00e9cembre"];
+var events=[];
 
-// ── Utils ────────────────────────────────────────────────────────
-const $=id=>document.getElementById(id);
+function g(id){return document.getElementById(id);}
 function pad(n){return String(n).padStart(2,"0");}
 function normTime(t){
   if(!t)return null;
-  const m=t.match(/^(\d{1,2})h(\d{2})$/i);
+  var m=t.match(/^(\d{1,2})h(\d{2})$/i);
   if(m)return m[1].padStart(2,"0")+":"+m[2];
   if(/^\d{2}:\d{2}$/.test(t))return t;
   return null;
 }
-function toast(msg,type="ok",ms=3500){
-  const c={ok:"#10b981",err:"#ef4444",warn:"#f59e0b",info:"#3b82f6"};
-  const el=$("toast");
+function toast(msg,type,ms){
+  if(!type)type="ok";if(!ms)ms=3500;
+  var c={ok:"#10b981",err:"#ef4444",warn:"#f59e0b",info:"#3b82f6"};
+  var el=g("toast");
   el.style.borderLeftColor=c[type]||c.ok;
   el.textContent=msg;el.style.display="block";
-  clearTimeout(el._t);el._t=setTimeout(()=>el.style.display="none",ms);
-}
-function tick(ms){return new Promise(r=>setTimeout(r,ms));}
-
-// ── Tabs ─────────────────────────────────────────────────────────
-function switchTab(mode){
-  const s=mode==="site";
-  $("itab-site").classList.toggle("active",s);
-  $("itab-file").classList.toggle("active",!s);
-  $("pane-site").classList.toggle("hidden",!s);
-  $("pane-file").classList.toggle("hidden",s);
+  clearTimeout(el._t);el._t=setTimeout(function(){el.style.display="none";},ms);
 }
 
-// ── WebView TCS ──────────────────────────────────────────────────
-
-// ── PARAMÈTRES & AUTOLOGIN ────────────────────────────────────────────────────
-const CRED_KEY_USER = 'tcs_user';
-const CRED_KEY_PASS = 'tcs_pass';
-const CRED_KEY_AUTO = 'tcs_auto';
-
-function openSettings(){
-  // Charger les valeurs sauvegardées
-  $("credUser").value = localStorage.getItem(CRED_KEY_USER)||"";
-  $("credPass").value = localStorage.getItem(CRED_KEY_PASS)||"";
-  $("autoLoginToggle").checked = localStorage.getItem(CRED_KEY_AUTO)==="1";
-  $("settingsPanel").classList.add("open");
-}
-function closeSettings(){
-  $("settingsPanel").classList.remove("open");
-}
+// SETTINGS
+g("settingsBtn").addEventListener("click",function(){
+  g("credUser").value=localStorage.getItem("tcs_user")||"";
+  g("credPass").value=localStorage.getItem("tcs_pass")||"";
+  g("autoLoginToggle").checked=localStorage.getItem("tcs_auto")==="1";
+  g("sPanel").classList.add("open");
+});
+function closeSettings(){g("sPanel").classList.remove("open");}
 function saveCredentials(){
-  const u=$("credUser").value.trim();
-  const p=$("credPass").value;
-  const a=$("autoLoginToggle").checked;
-  localStorage.setItem(CRED_KEY_USER, u);
-  localStorage.setItem(CRED_KEY_PASS, p);
-  localStorage.setItem(CRED_KEY_AUTO, a?"1":"0");
+  localStorage.setItem("tcs_user",g("credUser").value.trim());
+  localStorage.setItem("tcs_pass",g("credPass").value);
+  localStorage.setItem("tcs_auto",g("autoLoginToggle").checked?"1":"0");
   closeSettings();
-  toast("✅ Identifiants sauvegardés","ok");
+  toast("\u2705 Identifiants sauvegard\u00e9s","ok");
 }
 function clearCredentials(){
-  localStorage.removeItem(CRED_KEY_USER);
-  localStorage.removeItem(CRED_KEY_PASS);
-  localStorage.removeItem(CRED_KEY_AUTO);
-  $("credUser").value="";
-  $("credPass").value="";
-  $("autoLoginToggle").checked=false;
-  toast("🗑️ Identifiants effacés","ok");
+  localStorage.removeItem("tcs_user");
+  localStorage.removeItem("tcs_pass");
+  localStorage.removeItem("tcs_auto");
+  g("credUser").value="";g("credPass").value="";
+  g("autoLoginToggle").checked=false;
+  toast("\ud83d\uddd1\ufe0f Identifiants effac\u00e9s","ok");
 }
 
-// Script d'autologin injecté dans la WebView TCS
-function buildAutoLoginScript(user, pass){
-  // On attend que la page soit chargée, puis on cherche les champs login
-  // et on les remplit + soumet automatiquement
-  return `
-    (function autoLogin(){
-      var user=${JSON.stringify(user)};
-      var pass=${JSON.stringify(pass)};
-      function tryFill(){
-        // Chercher les champs — WinDev utilise souvent ces noms
-        var uField = document.querySelector(
-          'input[name*="user"],input[name*="User"],input[name*="login"],input[name*="Login"],' +
-          'input[id*="user"],input[id*="User"],input[id*="login"],input[id*="Login"],' +
-          'input[type="text"]:not([readonly])');
-        var pField = document.querySelector(
-          'input[type="password"]');
-        if(uField && pField){
-          uField.value=user;
-          pField.value=pass;
-          uField.dispatchEvent(new Event('input',{bubbles:true}));
-          uField.dispatchEvent(new Event('change',{bubbles:true}));
-          pField.dispatchEvent(new Event('input',{bubbles:true}));
-          pField.dispatchEvent(new Event('change',{bubbles:true}));
-          // Chercher le bouton de connexion
-          var btn = document.querySelector(
-            'button[type="submit"],input[type="submit"],' +
-            'button[id*="login"],button[id*="connect"],button[id*="Login"],' +
-            'button[onclick*="login"],button[onclick*="Login"]');
-          if(btn){ setTimeout(()=>btn.click(),300); }
-          else {
-            // Tenter la soumission du formulaire
-            var form=uField.closest("form");
-            if(form) setTimeout(()=>form.submit(),300);
-          }
-        } else {
-          // Réessayer dans 500ms si la page n'est pas encore prête
-          setTimeout(tryFill,500);
-        }
-      }
-      if(document.readyState==="loading"){
-        document.addEventListener("DOMContentLoaded",tryFill);
-      } else {
-        setTimeout(tryFill,300);
-      }
-    })();
-  `;
+// TABS
+function switchTab(mode){
+  var s=mode==="site";
+  g("itab-site").classList.toggle("active",s);
+  g("itab-file").classList.toggle("active",!s);
+  g("pane-site").classList.toggle("hidden",!s);
+  g("pane-file").classList.toggle("hidden",s);
 }
+
+// WEBVIEW TCS
 function openTCS(){
-  var autoLogin = localStorage.getItem(CRED_KEY_AUTO)==="1";
-  var user = localStorage.getItem(CRED_KEY_USER)||"";
-  var pass = localStorage.getItem(CRED_KEY_PASS)||"";
-  if(autoLogin && user && pass){
-    // Passer les credentials au bridge Android pour injection post-load
-    if(window.Android && window.Android.setAutoLoginCredentials){
-      window.Android.setAutoLoginCredentials(user, pass);
-    }
+  var autoLogin=localStorage.getItem("tcs_auto")==="1";
+  var user=localStorage.getItem("tcs_user")||"";
+  var pass=localStorage.getItem("tcs_pass")||"";
+  if(autoLogin&&user&&pass&&window.Android&&window.Android.setAutoLoginCredentials){
+    window.Android.setAutoLoginCredentials(user,pass);
   }
-  $("wvFrame").src="https://tcs.eqso.be/RHTime";
-  $("wvPanel").classList.add("open");
-  if(window.Android && window.Android.notifyWebViewOpen) window.Android.notifyWebViewOpen();
+  g("wvFrame").src="https://tcs.eqso.be/RHTime";
+  g("wvPanel").classList.add("open");
 }
-function closeWV(){
-  $("wvPanel").classList.remove("open");
-  toast("💡 Choisissez maintenant le fichier XML exporté","info",5000);
-}
+function closeWV(){g("wvPanel").classList.remove("open");}
 
-// ── File picker ──────────────────────────────────────────────────
-function pickFile(source){
-  const input=$(source==="site"?"fi-site":"fi-file");
-  input.value="";
-  input.click();
+// FILE PICKER
+function pickFile(src){
+  var input=g(src==="site"?"fi-site":"fi-file");
+  input.value="";input.click();
 }
-$("fi-site").onchange=()=>handleFile($("fi-site").files[0]);
-$("fi-file").onchange=()=>handleFile($("fi-file").files[0]);
+g("fi-site").onchange=function(){handleFile(g("fi-site").files[0]);};
+g("fi-file").onchange=function(){handleFile(g("fi-file").files[0]);};
 
-// ── Parse XML ────────────────────────────────────────────────────
+// PARSE XML
 function parseXML(xml){
-  const doc=new DOMParser().parseFromString(xml,"application/xml");
+  var doc=new DOMParser().parseFromString(xml,"application/xml");
   if(doc.querySelector("parsererror"))throw new Error("Fichier XML invalide");
-  const evs=[];
-  doc.querySelectorAll("Table_ListeHoraire").forEach((row,i)=>{
-    const g=tag=>row.querySelector(tag)?.textContent.trim()||"";
-    const dateRaw=g("Date"),code=g("Code");
+  var evs=[];
+  doc.querySelectorAll("Table_ListeHoraire").forEach(function(row,i){
+    function gt(tag){var el=row.querySelector(tag);return el?el.textContent.trim():"";}
+    var dateRaw=gt("Date"),code=gt("Code");
     if(!dateRaw||!code)return;
-    const m=dateRaw.match(/(\d{2}\/\d{2}\/\d{4})/);
+    var m=dateRaw.match(/(\d{2}\/\d{2}\/\d{4})/);
     if(!m)return;
-    evs.push({date:m[1],code,structure:g("Structure"),
-      debut:g("Début"),fin:g("Fin"),memo:g("Mémo"),sousCode:g("Sous-Code"),idx:i});
+    evs.push({date:m[1],code:code,structure:gt("Structure"),
+      debut:gt("D\u00e9but"),fin:gt("Fin"),memo:gt("M\u00e9mo"),sousCode:gt("Sous-Code"),idx:i});
   });
   return evs;
 }
 
-// ── Handle file ──────────────────────────────────────────────────
-async function handleFile(file){
+// HANDLE FILE
+function handleFile(file){
   if(!file)return;
   if(!file.name.toLowerCase().includes("xml")&&!file.type.includes("xml")){
-    toast("⚠️ Choisissez un fichier .xml","warn");return;
+    toast("\u26a0\ufe0f Choisissez un fichier .xml","warn");return;
   }
-  try{
-    const text=await file.text();
-    const evs=parseXML(text);
-    if(!evs.length){toast("⚠️ Aucun événement trouvé","warn");return;}
-    events=evs;
-    showPreview(evs);
-    toast("✅ "+evs.length+" événements chargés");
-  }catch(e){toast("❌ "+e.message,"err");}
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var evs=parseXML(e.target.result);
+      if(!evs.length){toast("\u26a0\ufe0f Aucun \u00e9v\u00e9nement trouv\u00e9","warn");return;}
+      events=evs;showPreview(evs);
+      toast("\u2705 "+evs.length+" \u00e9v\u00e9nements charg\u00e9s");
+    }catch(err){toast("\u274c "+err.message,"err");}
+  };
+  reader.readAsText(file,"UTF-8");
 }
 
-// ── Preview ──────────────────────────────────────────────────────
+// SHOW PREVIEW
 function showPreview(evs){
-  const[,mo,yr]=evs[0].date.split("/");
-  const moName=MOIS[parseInt(mo)-1];
-  $("moLbl").textContent=moName;
-  $("yrLbl").textContent=yr;
-  $("evCount").textContent=evs.length;
-  $("evMonth").textContent=moName+" "+yr;
-  $("evList").innerHTML=evs.map(ev=>{
-    const[dd,mm]=ev.date.split("/");
-    const d=normTime(ev.debut)||"—",f=normTime(ev.fin)||"—";
-    const loc=ev.structure?`<span class="ev-loc">${ev.structure}</span>`:"";
-    return`<div class="ev-item">
-      <span class="ev-date">${dd}/${mm}</span>
-      <span class="ev-code">${ev.code}</span>
-      <span class="ev-time">${d}→${f}</span>${loc}</div>`;
+  var parts=evs[0].date.split("/");
+  var moName=MOIS[parseInt(parts[1])-1];
+  g("moLbl").textContent=moName;g("yrLbl").textContent=parts[2];
+  g("evCount").textContent=evs.length;
+  g("evMonth").textContent=moName+" "+parts[2];
+  g("evList").innerHTML=evs.map(function(ev){
+    var p=ev.date.split("/");
+    var d=normTime(ev.debut)||"\u2014",f=normTime(ev.fin)||"\u2014";
+    return "<div class='ev-item'><span class='ev-date'>"+p[0]+"/"+p[1]+"</span>"
+      +"<span class='ev-code'>"+ev.code+"</span><span class='ev-time'>"+d+"\u2192"+f+"</span>"
+      +(ev.structure?"<span class='ev-loc'>"+ev.structure+"</span>":"")+"</div>";
   }).join("");
-  $("card1").classList.add("done");$("card1").classList.remove("active");
-  $("card2").classList.remove("hidden");$("card2").classList.add("active");
-  $("btnCal").disabled=false;$("btnShare").disabled=false;
-  $("card2").scrollIntoView({behavior:"smooth",block:"start"});
+  g("card1").className="card done";
+  g("card2").className="card active";
+  g("btnCal").disabled=false;g("btnShare").disabled=false;
+  g("card2").scrollIntoView({behavior:"smooth",block:"start"});
 }
 
-// ── Build ICS ────────────────────────────────────────────────────
+// BUILD ICS
 function buildICS(evs){
-  const now=new Date();
-  const ds=`${now.getUTCFullYear()}${pad(now.getUTCMonth()+1)}${pad(now.getUTCDate())}T${pad(now.getUTCHours())}${pad(now.getUTCMinutes())}${pad(now.getUTCSeconds())}Z`;
-  const esc=s=>(s||"").replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\n/g,"\\n");
-  const dt=(d,t)=>{const[dd,mm,yy]=d.split("/");const n=normTime(t)||"00:00";const[h,mi]=n.split(":");return`${yy}${pad(mm)}${pad(dd)}T${pad(h)}${pad(mi)}00`;};
-  const fold=l=>{if(l.length<=75)return l;let r="",p=0;while(p<l.length){r+=(p===0?"":"\r\n ")+l.substring(p,p+(p===0?75:74));p+=(p===0?75:74);}return r;};
-  const lines=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//TCS ICS APK//FR",
+  var now=new Date();
+  var ds=now.getUTCFullYear()+pad(now.getUTCMonth()+1)+pad(now.getUTCDate())
+    +"T"+pad(now.getUTCHours())+pad(now.getUTCMinutes())+pad(now.getUTCSeconds())+"Z";
+  function esc(s){return(s||"").replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\n/g,"\\n");}
+  function dt(d,t){var p=d.split("/");var n=normTime(t)||"00:00";var h=n.split(":");
+    return p[2]+pad(p[1])+pad(p[0])+"T"+pad(h[0])+pad(h[1])+"00";}
+  function fold(l){if(l.length<=75)return l;
+    var r="",p=0;while(p<l.length){r+=(p===0?"":"\r\n ")+l.substring(p,p+(p===0?75:74));p+=(p===0?75:74);}return r;}
+  var lines=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//TCS ICS APK//FR",
     "CALSCALE:GREGORIAN","METHOD:PUBLISH","X-WR-CALNAME:Horaire TCS","X-WR-TIMEZONE:Europe/Brussels",
     "BEGIN:VTIMEZONE","TZID:Europe/Brussels",
     "BEGIN:STANDARD","DTSTART:19701025T030000","RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=10",
     "TZOFFSETFROM:+0200","TZOFFSETTO:+0100","TZNAME:CET","END:STANDARD",
     "BEGIN:DAYLIGHT","DTSTART:19700329T020000","RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=3",
     "TZOFFSETFROM:+0100","TZOFFSETTO:+0200","TZNAME:CEST","END:DAYLIGHT","END:VTIMEZONE"];
-  evs.forEach((ev,i)=>{
-    const[d,mo,y]=ev.date.split("/");
-    const deb=normTime(ev.debut),fin=normTime(ev.fin);
-    const notes=[ev.memo,ev.sousCode].filter(Boolean).join("\\n");
+  evs.forEach(function(ev,i){
+    var p=ev.date.split("/");
+    var deb=normTime(ev.debut),fin=normTime(ev.fin);
+    var notes=[ev.memo,ev.sousCode].filter(Boolean).join("\\n");
     lines.push("BEGIN:VEVENT",
-      `UID:tcs-${ev.date.replace(/\//g,"-")}-${ev.code}-${i}@eqso.be`,
-      `DTSTAMP:${ds}`,
-      deb&&fin?`DTSTART;TZID=Europe/Brussels:${dt(ev.date,ev.debut)}`:`DTSTART;VALUE=DATE:${y}${pad(mo)}${pad(d)}`,
-      deb&&fin?`DTEND;TZID=Europe/Brussels:${dt(ev.date,ev.fin)}`:`DTEND;VALUE=DATE:${y}${pad(mo)}${pad(d)}`,
-      `SUMMARY:${esc("Travail - "+ev.code)}`,
-      ...(ev.structure?[`LOCATION:${esc(ev.structure)}`]:[]),
-      ...(notes?[`DESCRIPTION:${notes}`]:[]),
-      "END:VEVENT");
+      "UID:tcs-"+ev.date.replace(/\//g,"-")+"-"+ev.code+"-"+i+"@eqso.be",
+      "DTSTAMP:"+ds,
+      deb&&fin?"DTSTART;TZID=Europe/Brussels:"+dt(ev.date,ev.debut):"DTSTART;VALUE=DATE:"+p[2]+pad(p[1])+pad(p[0]),
+      deb&&fin?"DTEND;TZID=Europe/Brussels:"+dt(ev.date,ev.fin):"DTEND;VALUE=DATE:"+p[2]+pad(p[1])+pad(p[0]),
+      "SUMMARY:"+esc("Travail - "+ev.code));
+    if(ev.structure)lines.push("LOCATION:"+esc(ev.structure));
+    if(notes)lines.push("DESCRIPTION:"+notes);
+    lines.push("END:VEVENT");
   });
   lines.push("END:VCALENDAR");
   return lines.map(fold).join("\r\n")+"\r\n";
 }
 
-// ── Export (via bridge Android natif) ────────────────────────────
-async function exportICS(openCal){
+// EXPORT ICS
+function exportICS(openCal){
   if(!events.length)return;
-  $("progWrap").classList.remove("hidden");
-  $("btnCal").disabled=true;
-  $("btnShare").disabled=true;
-
-  // Petit délai pour que l'UI s'affiche
-  await tick(100);
-
-  try{
-    const ics=buildICS(events);
-    const[,mo,yr]=events[0].date.split("/");
-    const fname=`horaire-tcs-${yr}-${mo}.ics`;
-
-    // Utilise le bridge Java (disponible dans l'APK)
-    if(window.Android && window.Android.saveAndOpenICS){
-      window.Android.saveAndOpenICS(ics, fname, openCal);
-      toast(openCal?"📅 Ouverture dans Calendar…":"↑ Partage en cours…","ok");
-      if(window.Android.onIcsExported) window.Android.onIcsExported();
-    } else {
-      // Fallback navigateur (PWA ou dev)
-      const blob=new Blob([ics],{type:"text/calendar;charset=utf-8"});
-      const url=URL.createObjectURL(blob);
-      const a=document.createElement("a");
-      a.href=url;a.download=fname;
-      document.body.appendChild(a);a.click();document.body.removeChild(a);
-      setTimeout(()=>URL.revokeObjectURL(url),5000);
-      toast("💾 Fichier .ics téléchargé","ok");
-      if(window.Android && window.Android.onIcsExported) window.Android.onIcsExported();
-    }
-  }catch(e){
-    toast("❌ "+e.message,"err");
-  }finally{
-    await tick(2000);
-    $("progWrap").classList.add("hidden");
-    $("progFill").style.width="0%";
-    $("btnCal").disabled=false;
-    $("btnShare").disabled=false;
+  var ics=buildICS(events);
+  var parts=events[0].date.split("/");
+  var fname="horaire-tcs-"+parts[2]+"-"+parts[1]+".ics";
+  if(window.Android&&window.Android.saveAndOpenICS){
+    window.Android.saveAndOpenICS(ics,fname,openCal);
+  } else {
+    var blob=new Blob([ics],{type:"text/calendar;charset=utf-8"});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement("a");a.href=url;a.download=fname;
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    setTimeout(function(){URL.revokeObjectURL(url);},5000);
   }
 }
 
-// ── Reset ────────────────────────────────────────────────────────
+// RESET
 function reset(){
   events=[];
-  $("card1").className="card active";
-  $("card2").className="card hidden";
-  $("btnCal").disabled=true;$("btnShare").disabled=true;
-  $("moLbl").textContent="—";$("yrLbl").textContent="—";
+  g("card1").className="card active";
+  g("card2").className="card hidden";
+  g("btnCal").disabled=true;g("btnShare").disabled=true;
+  g("moLbl").textContent="\u2014";g("yrLbl").textContent="\u2014";
 }
 
-// Init date
-const n=new Date();
-$("moLbl").textContent=MOIS[n.getMonth()];
-$("yrLbl").textContent=n.getFullYear();
+// INIT
+var n=new Date();
+g("moLbl").textContent=MOIS[n.getMonth()];
+g("yrLbl").textContent=n.getFullYear();
 </script>
 </body>
 </html>
