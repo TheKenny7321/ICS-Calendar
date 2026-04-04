@@ -22,7 +22,7 @@
 
 L'application n'étant pas sur le Play Store, voici la marche à suivre :
 
-1. Téléchargez l'APK depuis l'onglet **Releases** de ce dépôt. -> [Télécharger Release 2.1](https://github.com/TheKenny7321/ICS-Calendar/releases/download/Release_2.1/TCS.Calendar.apk)
+1. Téléchargez l'APK depuis l'onglet **Releases** de ce dépôt. -> [Télécharger Release 2.2](https://github.com/TheKenny7321/ICS-Calendar/releases/download/Release_2.2/TCS.Calendar.apk)
 2. Autorisez l'installation depuis des sources inconnues dans vos paramètres Android.
 3. Installez et lancez !
 
