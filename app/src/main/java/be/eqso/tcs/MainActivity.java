@@ -294,7 +294,7 @@ public class MainActivity extends AppCompatActivity {
             // Récupérer les cookies actuels de la WebView
             android.webkit.CookieManager cm = android.webkit.CookieManager.getInstance();
             String cookies = cm.getCookie(url);
-            if (cookies == null) cookies = sessionCookies;
+            if (cookies == null) cookies = "";
             downloadXmlDirectly(url, cookies != null ? cookies : "");
         });
 
