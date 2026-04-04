@@ -367,6 +367,16 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @JavascriptInterface
+        public void loadTCSPage() {
+            // Charger le site TCS directement dans la WebView
+            // (pas dans une iframe — pour que onPageFinished et l'autologin fonctionnent)
+            mainHandler.post(() -> {
+                webView.stopLoading();
+                webView.loadUrl("https://tcs.eqso.be/RHTime");
+            });
+        }
+
+        @JavascriptInterface
         public String getAppVersion() { return "2.0"; }
     }
 }

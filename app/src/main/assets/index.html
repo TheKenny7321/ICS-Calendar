@@ -178,7 +178,7 @@
   </div>
 
   <div class="tabs">
-    <div class="itab active" id="itab-site" onclick="switchTab('site')">&#127760; Depuis le site</div>
+    <div class="itab active" id="itab-site" onclick="switchTab('site')">&#127760; Depuis RHTime</div>
     <div class="itab"        id="itab-file" onclick="switchTab('file')">&#128194; Fichier local</div>
   </div>
 
@@ -186,10 +186,9 @@
     <div class="card active" id="card1" style="margin-top:14px">
       <div class="c-hdr"><div class="step-n">1</div><div class="c-title">Importer le planning</div></div>
       <div id="pane-site">
-        <p class="c-desc">Connectez-vous sur le site TCS, naviguez vers votre planning, puis faites <strong>clic long &#8594; Exporter en XML</strong>.</p>
-        <button class="btn btn-blue" onclick="openTCS()">&#127760; Ouvrir tcs.eqso.be</button>
-        <button class="btn btn-ghost" style="margin-top:8px" onclick="pickFile('site')">&#128194; Choisir le fichier XML</button>
-        <input type="file" id="fi-site" accept=".xml,text/xml,application/xml" style="display:none">
+        <p class="c-desc">Connectez-vous sur RHTime, naviguez vers votre planning, puis faites <strong>clic long &#8594; Exporter en XML</strong>. L'import se fait automatiquement.</p>
+        <button class="btn btn-blue" onclick="openTCS()">&#127760; Importer depuis RHTime</button>
+        
       </div>
       <div id="pane-file" class="hidden">
         <p class="c-desc">S&#233;lectionnez un fichier XML TCS d&#233;j&#224; pr&#233;sent sur votre appareil.</p>
@@ -220,7 +219,7 @@
   <div class="bot">
     <button class="btn btn-ghost" onclick="reset()" style="width:auto;padding:13px 14px">&#8634;</button>
     <button class="btn btn-ok" id="btnCal" disabled style="flex:1" onclick="exportICS(true)">
-      &#128197; Ouvrir le .ics avec&#8230;
+      &#128197; Ouvrir l'ICS
     </button>
     <button class="btn btn-ghost" id="btnShare" disabled style="width:auto;padding:13px 14px" onclick="exportICS(false)">
       &#8593;
@@ -228,20 +227,7 @@
   </div>
 </div>
 
-<!-- PANEL WEBVIEW TCS -->
-<div class="wv-panel" id="wvPanel">
-  <div class="wv-hdr">
-    <button class="btn-x" onclick="closeWV()">&#10005;</button>
-    <div class="wv-title">
-      <b>TCS &#8212; RHTime Planning</b>
-      <span>https://tcs.eqso.be/RHTime</span>
-    </div>
-  </div>
-  <iframe class="wv-frame" id="wvFrame" src="about:blank"
-    sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-downloads"
-    allow="downloads"></iframe>
-  <div class="wv-tip">Connectez-vous &#8594; planning &#8594; <strong>clic long &#8594; Exporter XML</strong></div>
-</div>
+<!-- wv-panel removed: TCS loads directly in WebView -->
 
 <!-- PANEL PARAMETRES -->
 <div class="s-panel" id="sPanel">
@@ -343,20 +329,21 @@ function openTCS(){
   var autoLogin=localStorage.getItem("tcs_auto")==="1";
   var user=localStorage.getItem("tcs_user")||"";
   var pass=localStorage.getItem("tcs_pass")||"";
-  if(autoLogin&&user&&pass&&window.Android&&window.Android.setAutoLoginCredentials){
-    window.Android.setAutoLoginCredentials(user,pass);
+  if(window.Android){
+    if(autoLogin&&user&&pass&&window.Android.setAutoLoginCredentials){
+      window.Android.setAutoLoginCredentials(user,pass);
+    }
+    // Charger TCS directement dans la WebView Android (pas dans une iframe)
+    window.Android.loadTCSPage();
   }
-  g("wvFrame").src="https://tcs.eqso.be/RHTime";
-  g("wvPanel").classList.add("open");
 }
-function closeWV(){g("wvPanel").classList.remove("open");}
 
 // FILE PICKER
 function pickFile(src){
   var input=g(src==="site"?"fi-site":"fi-file");
   input.value="";input.click();
 }
-g("fi-site").onchange=function(){handleFile(g("fi-site").files[0]);};
+// fi-site input removed (auto-import via download)
 g("fi-file").onchange=function(){handleFile(g("fi-file").files[0]);};
 
 // PARSE XML
