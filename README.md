@@ -46,7 +46,7 @@ tcs-apk/
 │   │       ├── values/{strings,themes}.xml
 │   │       └── xml/file_paths.xml
 ├── gradle/wrapper/
-│   ├── gradle-wrapper.jar          ← À télécharger (voir Étape 1)
+│   ├── gradle-wrapper.jar
 │   └── gradle-wrapper.properties
 ├── build.gradle
 ├── settings.gradle
