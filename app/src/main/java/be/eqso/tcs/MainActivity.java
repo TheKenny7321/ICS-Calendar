@@ -303,8 +303,21 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
-        if (webView.canGoBack()) webView.goBack();
-        else super.onBackPressed();
+        // Vérifier si le panneau paramètres est ouvert (côté JS) → le fermer en priorité
+        webView.evaluateJavascript(
+            "document.getElementById('sPanel')!=null && document.getElementById('sPanel').classList.contains('open')",
+            result -> {
+                if ("true".equals(result)) {
+                    // Fermer le panneau paramètres
+                    mainHandler.post(() ->
+                        webView.evaluateJavascript("closeSettings();", null));
+                } else if (webView.canGoBack()) {
+                    mainHandler.post(() -> webView.goBack());
+                } else {
+                    mainHandler.post(() -> MainActivity.super.onBackPressed());
+                }
+            }
+        );
     }
 
     // ── Bridge JS ↔ Android ───────────────────────────────────────────────────
