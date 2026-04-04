@@ -1,6 +1,6 @@
 # Bienvenue sur le Wiki de ICS-Calendar 📅
 
-**ICS-Calendar** est l'outil indispensable pour les utilisateurs de **RHTime**. Il vous permet de transformer votre planning professionnel (souvent verrouillé en format XML) en événements de calendrier (`.ics`) parfaitement intégrés à votre smartphone.
+**ICS-Calendar** est l'outil indispensable pour les utilisateurs de **RHTime**. Il vous permet de transformer votre planning professionnel (Téléchargeable en .xml depuis RHTime) en événements de calendrier (`.ics`) parfaitement intégrés à votre smartphone.
 
 ### 🌟 Points forts
 * **Intégration RHTime** : Connectez-vous et exportez votre horaire en deux clics.
