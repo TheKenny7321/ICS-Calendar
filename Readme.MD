@@ -1,20 +1,22 @@
-# Bienvenue sur le Wiki de ICS-Calendar 📅
+![Version](https://img.shields.io/badge/version-2.2-blue) ![Android](https://img.shields.io/badge/Android-7.0%2B-green)
 
-**ICS-Calendar** est l'outil indispensable pour les utilisateurs de **RHTime**. Il vous permet de transformer votre planning professionnel (Téléchargeable en .xml depuis RHTime) en événements de calendrier (`.ics`) parfaitement intégrés à votre smartphone.
+# ICS-Calendar 📅
+
+**ICS-Calendar** est l'outil indispensable pour les utilisateurs de **RHTime**. Il vous permet de transformer votre planning professionnel (téléchargeable en `.xml` depuis RHTime) en événements de calendrier (`.ics`) parfaitement intégrés à votre smartphone.
 
 ### 🌟 Points forts
 * **Intégration RHTime** : Connectez-vous et exportez votre horaire en deux clics.
-* **Zéro perte de données** : Toutes vos informations (Mémos, codes horaires, lieux) sont conservées.
-* **Conversion Automatique** : L'application détecte le XML et génère le fichier ICS instantanément.
+* **Zéro perte de données** : Toutes vos informations (mémos, codes horaires, lieux) sont conservées.
+* **Conversion automatique** : L'application détecte le XML et génère le fichier ICS instantanément.
 * **Flexibilité** : Ajoutez l'événement à votre agenda personnel ou partagez-le avec vos collègues.
 
 ---
 
 ### 📖 Sommaire
 * [📲 Installation de l'APK](#installation-de-lapk)
-* [🚀 Guide de Conversion RHTime](#comment-convertir-votre-horaire-rhtime) (Méthode recommandée)
-* [📂 Importation Locale](#importation-locale)
-* [📊 Données et champs conservés](#donnees-et-champs-conserves)
+* [🚀 Guide de conversion RHTime](#comment-convertir-votre-horaire-rhtime) (Méthode recommandée)
+* [📂 Importation locale](#importation-locale)
+* [📊 Données et champs conservés](#données-et-champs-conservés)
 
 ---
 
@@ -22,7 +24,7 @@
 
 L'application n'étant pas sur le Play Store, voici la marche à suivre :
 
-1. Téléchargez l'APK depuis l'onglet **Releases** de ce dépôt. -> [Télécharger Release 2.2](https://github.com/TheKenny7321/ICS-Calendar/releases/download/Release_2.2/TCS.Calendar.apk)
+1. Téléchargez l'APK depuis l'onglet **Releases** de ce dépôt → [Télécharger la dernière version](https://github.com/TheKenny7321/ICS-Calendar/releases/latest/download/TCS.Calendar.apk)
 2. Autorisez l'installation depuis des sources inconnues dans vos paramètres Android.
 3. Installez et lancez !
 
@@ -39,9 +41,8 @@ L'application facilite la récupération de votre planning via un navigateur int
   <img src="https://github.com/user-attachments/assets/be867b80-9c06-4a0a-a835-a1df08100592" width="300">
 </p>
 
+### Étape 1 : Configuration (optionnel mais recommandé)
 
-
-### Étape 1 : Configuration (Optionnel mais recommandé)
 Pour gagner du temps, allez dans les **Paramètres** de l'application et enregistrez vos identifiants RHTime. L'application vous connectera automatiquement lors de vos prochaines sessions.
 
 <p align="center">
@@ -49,6 +50,7 @@ Pour gagner du temps, allez dans les **Paramètres** de l'application et enregis
 </p>
 
 ### Étape 2 : Récupérer l'horaire
+
 1. Lancez la connexion à RHTime depuis l'écran principal de l'application.
 2. Une fois sur votre grille horaire, effectuez un **appui long n'importe où sur l'écran**.
 3. Dans le menu qui s'affiche, sélectionnez **"Exporter en XML"**.
@@ -57,8 +59,8 @@ Pour gagner du temps, allez dans les **Paramètres** de l'application et enregis
   <img src="https://github.com/user-attachments/assets/10235d0c-6b5b-4ee4-89e2-3042710c05fa" width="300">
 </p>
 
+### Étape 3 : Conversion et action
 
-### Étape 3 : Conversion et Action
 Dès que vous avez cliqué sur "Exporter", l'application prend le relais :
 * Elle convertit le flux XML en format standard ICS de manière invisible.
 * Vous arrivez alors sur l'écran final vous proposant :
@@ -69,14 +71,13 @@ Dès que vous avez cliqué sur "Exporter", l'application prend le relais :
   <img src="https://github.com/user-attachments/assets/df7636f8-eb5f-4d9f-983d-eae920495d7c" width="300">
 </p>
 
-
 ---
 
-## Importation Locale
+## Importation locale
 
 Si vous possédez déjà un fichier `.xml` exporté manuellement de RHTime :
 
-1. Cliquez sur **"Importer un fichier local"** sur l'écran d'accueil.
+1. Cliquez sur l'onglet **"Fichier local"** sur l'écran d'accueil.
 2. Sélectionnez votre fichier dans le dossier "Téléchargements".
 3. L'application traitera le fichier exactement comme s'il sortait du navigateur intégré.
 
@@ -84,21 +85,22 @@ Si vous possédez déjà un fichier `.xml` exporté manuellement de RHTime :
   <img src="https://github.com/user-attachments/assets/34d4791b-d9c6-4431-8f2c-63aac14d218d" width="300">
 </p>
 
-
 ---
 
 ## Données et champs conservés
 
 Contrairement à d'autres convertisseurs basiques, **ICS-Calendar** extrait et réinjecte l'intégralité des informations fournies par RHTime dans les champs correspondants du calendrier :
 
-| Donnée RHTime | Champ dans votre Agenda |
+| Donnée RHTime | Champ dans votre agenda |
 | :--- | :--- |
 | **Date & Heure** | Début et fin de l'événement |
 | **Lieu** | Emplacement de l'événement |
-| **Code Horaire** | Titre ou préfixe de l'événement |
+| **Code horaire** | Titre de l'événement |
 | **Mémo** | Description / Notes |
 | **Note** | Description / Notes complémentaires |
 
 *Cela vous permet de retrouver vos consignes spécifiques ou vos numéros de poste directement dans la notification de votre calendrier.*
 
 ---
+
+*Application développée avec l'assistance de [Claude](https://claude.ai) (Anthropic) — de l'idée à l'APK, entièrement par conversation.*
