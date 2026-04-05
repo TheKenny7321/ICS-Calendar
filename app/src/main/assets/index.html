@@ -450,8 +450,8 @@
 </div>
 
 <div class="codes-panel" id="deletePanel">
-  <div class="s-hdr">
-    <button class="btn-x" onclick="closeDeletePanel()">←</button>
+<div class="s-hdr">
+    <button class="btn-x" onclick="closeDeletePanel()">✕</button>
     <div class="s-hdr-title">🗑️ Supprimer des codes</div>
   </div>
   <div class="s-scroll">
@@ -615,10 +615,11 @@ function renderRenameList(){
   empty.style.display = "none";
   list.innerHTML = codes.map(function(c){
     var defaultName = "Travail - " + c.code;
-    // On ajoute un style gris si le code est ignoré pour bien le différencier
     var opacityStyle = c.excluded ? 'style="opacity:0.6"' : '';
 
-    return '<div class="code-item" '+opacityStyle+'>'
+    return '<div class="code-item" data-code="'+c.code+'" '+opacityStyle+'>'
+      // Ajout de la poignée de déplacement
+      +'<div class="drag-handle">☰</div>'
       +'<span class="code-badge">'+c.code+'</span>'
       +'<input type="text" class="rename-input" value="'+(c.name||"")+'" '
       +'placeholder="'+defaultName+'" '
