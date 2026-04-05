@@ -41,8 +41,10 @@ public class MainActivity extends AppCompatActivity {
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     // Credentials autologin (passés depuis le JS)
-    private String autoLoginUser = null;
-    private String autoLoginPass = null;
+    private String  autoLoginUser  = null;
+    private String  autoLoginPass  = null;
+    private boolean confirmExit    = false;
+    private long    lastBackPress  = 0;
 
     // ── File picker manuel ────────────────────────────────────────────────────
     private final ActivityResultLauncher<Intent> filePickerLauncher =
@@ -303,16 +305,36 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
-        // Vérifier si le panneau paramètres est ouvert (côté JS) → le fermer en priorité
+        // Priorité 1 : panel codes ouvert → fermer
+        // Priorité 2 : panel settings ouvert → fermer
+        // Priorité 3 : WebView peut reculer → goBack
+        // Priorité 4 : confirm exit activé → double press
+        // Priorité 5 : quitter
         webView.evaluateJavascript(
-            "document.getElementById('sPanel')!=null && document.getElementById('sPanel').classList.contains('open')",
+            "(function(){" +
+            "  if(document.getElementById('codesPanel')&&document.getElementById('codesPanel').classList.contains('open'))return 'codes';" +
+            "  if(document.getElementById('sPanel')&&document.getElementById('sPanel').classList.contains('open'))return 'settings';" +
+            "  return 'none';" +
+            "})()",
             result -> {
-                if ("true".equals(result)) {
-                    // Fermer le panneau paramètres
+                if (""codes"".equals(result)) {
+                    mainHandler.post(() ->
+                        webView.evaluateJavascript("closeCodesPanel();", null));
+                } else if (""settings"".equals(result)) {
                     mainHandler.post(() ->
                         webView.evaluateJavascript("closeSettings();", null));
                 } else if (webView.canGoBack()) {
                     mainHandler.post(() -> webView.goBack());
+                } else if (confirmExit) {
+                    long now = System.currentTimeMillis();
+                    if (now - lastBackPress < 2000) {
+                        mainHandler.post(() -> MainActivity.super.onBackPressed());
+                    } else {
+                        lastBackPress = now;
+                        mainHandler.post(() ->
+                            webView.evaluateJavascript(
+                                "toast('Appuyez encore une fois pour quitter','info',2000);", null));
+                    }
                 } else {
                     mainHandler.post(() -> MainActivity.super.onBackPressed());
                 }
@@ -370,6 +392,12 @@ public class MainActivity extends AppCompatActivity {
         public void showToast(String msg) {
             mainHandler.post(() ->
                 Toast.makeText(MainActivity.this, msg, Toast.LENGTH_LONG).show());
+        }
+
+        @JavascriptInterface
+        public void setConfirmExit(boolean value) {
+            confirmExit = value;
+            Log.d(TAG, "confirmExit=" + value);
         }
 
         @JavascriptInterface
