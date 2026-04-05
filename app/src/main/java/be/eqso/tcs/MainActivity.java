@@ -29,8 +29,6 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -151,6 +149,8 @@ public class MainActivity extends AppCompatActivity {
                         "    return;" +
                         "  }" +
                         "  events=evs;" +
+                        // FIX: On ajoute l'appel pour apprendre les codes automatiquement !
+                        "  if(typeof registerCodes === 'function') registerCodes(evs);" +
                         "  showPreview(evs);" +
                         "  Android.onXmlLoaded(evs.length);" +
                         "}catch(e){" +
@@ -303,30 +303,26 @@ public class MainActivity extends AppCompatActivity {
         webView.loadUrl("file:///android_asset/index.html");
     }
 
-	@Override
+    @Override
     public void onBackPressed() {
-        // Priorité 1 : panel codes ouvert → fermer
-        // Priorité 2 : panel settings ouvert → fermer
-        // Priorité 3 : WebView peut reculer → goBack
-        // Priorité 4 : confirm exit activé → double press
-        // Priorité 5 : quitter
+        // Priorité 1 : panels (codes, settings, rename) ouverts → fermer
+        // Priorité 2 : WebView peut reculer → goBack
+        // Priorité 3 : confirm exit activé → double press
+        // Priorité 4 : quitter
         webView.evaluateJavascript(
             "(function(){" +
             "  if(document.getElementById('codesPanel')&&document.getElementById('codesPanel').classList.contains('open'))return 'codes';" +
+            "  if(document.getElementById('renamePanel')&&document.getElementById('renamePanel').classList.contains('open'))return 'rename';" +
             "  if(document.getElementById('sPanel')&&document.getElementById('sPanel').classList.contains('open'))return 'settings';" +
             "  return 'none';" +
             "})()",
             result -> {
-                // evaluateJavascript renvoie la chaîne entourée de guillemets (ex: '"codes"').
-                // On nettoie la chaîne pour éviter les problèmes de comparaison.
-                String cleanResult = result != null ? result.replace("\"", "") : "";
-
-                if ("codes".equals(cleanResult)) {
-                    mainHandler.post(() ->
-                        webView.evaluateJavascript("closeCodesPanel();", null));
-                } else if ("settings".equals(cleanResult)) {
-                    mainHandler.post(() ->
-                        webView.evaluateJavascript("closeSettings();", null));
+                if ("\"codes\"".equals(result)) {
+                    mainHandler.post(() -> webView.evaluateJavascript("closeCodesPanel();", null));
+                } else if ("\"rename\"".equals(result)) {
+                    mainHandler.post(() -> webView.evaluateJavascript("closeRenamePanel();", null));
+                } else if ("\"settings\"".equals(result)) {
+                    mainHandler.post(() -> webView.evaluateJavascript("closeSettings();", null));
                 } else if (webView.canGoBack()) {
                     mainHandler.post(() -> webView.goBack());
                 } else if (confirmExit) {

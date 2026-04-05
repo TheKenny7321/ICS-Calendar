@@ -150,24 +150,17 @@
     .cal-code.excl{background:var(--brd);color:var(--muted);text-decoration:line-through}
     .cal-time{font-size:8px;color:var(--muted);margin-top:1px}
 
-    /* PROGRESS */
-    .prog{margin-bottom:10px}
-    .prog-bg{background:var(--brd);border-radius:99px;height:4px;overflow:hidden;margin-bottom:5px}
-    .prog-fill{height:100%;border-radius:99px;
-      background:linear-gradient(90deg,var(--blue),var(--cyan));transition:width .4s;width:0%}
-    .prog-msg{font-size:10px;color:var(--muted)}
-
     /* BOTTOM */
     .bot{position:fixed;bottom:0;left:0;right:0;
       background:rgba(10,15,30,.97);backdrop-filter:blur(20px);
       border-top:1px solid var(--brd);padding:10px 20px 20px;display:flex;gap:8px}
 
     /* PANELS COMMUNS */
-    .s-panel,.codes-panel{position:fixed;inset:0;background:var(--bg);
+    .s-panel, .codes-panel{position:fixed;inset:0;background:var(--bg);
       display:flex;flex-direction:column}
     .s-panel{z-index:600;transform:translateX(100%);transition:transform .3s cubic-bezier(.16,1,.3,1)}
     .codes-panel{z-index:700;transform:translateX(100%);transition:transform .3s cubic-bezier(.16,1,.3,1)}
-    .s-panel.open,.codes-panel.open{transform:none}
+    .s-panel.open, .codes-panel.open{transform:none}
     .s-hdr{display:flex;align-items:center;gap:12px;
       padding:16px 18px;background:var(--surf);border-bottom:1px solid var(--brd);flex-shrink:0}
     .s-hdr-title{flex:1;font-size:15px;font-weight:700}
@@ -210,27 +203,32 @@
     .s-nav-sub{font-size:10px;color:var(--muted);margin-top:2px}
     .s-nav-arrow{color:var(--muted);font-size:16px}
 
-    /* CODES PANEL */
+    /* CODES PANEL (Ignorer + Renommer) */
     .codes-add-row{display:flex;gap:8px;margin-bottom:14px}
     .codes-add-row .s-input{margin:0}
     .code-item{display:flex;align-items:center;gap:10px;
       background:var(--surf2);border:1px solid var(--brd);border-radius:10px;
-      padding:10px 12px;margin-bottom:6px}
+      padding:8px 12px;margin-bottom:6px;transition: transform 0.2s, opacity 0.2s;}
     .code-item.excl-item{opacity:.65}
-    .code-badge{font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;
+    .code-badge{font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;
       background:rgba(37,99,235,.15);color:var(--bluL);flex-shrink:0;min-width:44px;text-align:center}
     .code-item.excl-item .code-badge{background:var(--brd);color:var(--muted);text-decoration:line-through}
     .code-label{flex:1;font-size:12px;color:var(--text)}
-    .code-arrows{display:flex;flex-direction:column;gap:2px}
-    .code-arrow{background:var(--brd);border:none;color:var(--muted);
-      width:22px;height:20px;border-radius:4px;cursor:pointer;font-size:11px;
-      display:flex;align-items:center;justify-content:center}
+    
+    /* Drag and Drop Mobile */
+    .drag-handle{padding:6px;margin-left:-6px;cursor:grab;color:var(--muted);font-size:18px;line-height:1;touch-action:none}
+    .code-item.dragging { opacity:0.8; background:var(--surf); border-color:var(--bluL); z-index: 100; transform: scale(1.02); }
+    
     .code-del{background:transparent;border:none;color:var(--err);
       font-size:16px;cursor:pointer;padding:2px 4px;flex-shrink:0}
     .code-cb{width:18px;height:18px;cursor:pointer;accent-color:var(--err);flex-shrink:0}
     .codes-legend{display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap}
     .leg-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted)}
     .leg-dot{width:10px;height:10px;border-radius:3px}
+
+    /* Input pour renommer */
+    .rename-input{flex:1; background:var(--surf); border:1px solid var(--brd); color:var(--text); padding:8px 10px; border-radius:6px; font-size:12px; outline:none; transition:border-color .2s}
+    .rename-input:focus{border-color:var(--bluL)}
 
     /* TOAST */
     .toast{position:fixed;top:16px;left:16px;right:16px;
@@ -242,7 +240,6 @@
 </head>
 <body>
 <div class="app">
-  <!-- HEADER -->
   <div class="hdr">
     <div class="brand">
       <div class="brand-ico">&#128197;</div>
@@ -259,20 +256,18 @@
       <button class="settings-btn" id="settingsBtn">
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
           <circle cx="12" cy="12" r="3"/>
-          <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+          <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
         </svg>
       </button>
     </div>
   </div>
 
-  <!-- ONGLETS -->
   <div class="tabs">
     <div class="itab active" id="itab-site" onclick="switchTab('site')">&#127760; Depuis RHTime</div>
     <div class="itab"        id="itab-file" onclick="switchTab('file')">&#128194; Fichier local</div>
   </div>
 
   <div class="scroll">
-    <!-- ETAPE 1 -->
     <div class="card active" id="card1" style="margin-top:14px">
       <div class="c-hdr"><div class="step-n">1</div><div class="c-title">Importer le planning</div></div>
       <div id="pane-site">
@@ -290,7 +285,6 @@
       </div>
     </div>
 
-    <!-- ETAPE 2 : Apercu -->
     <div class="card hidden" id="card2">
       <div class="c-hdr"><div class="step-n">2</div><div class="c-title">Aper&#231;u du planning</div></div>
       <div class="ev-box">
@@ -300,31 +294,22 @@
         <div class="ev-sub" id="evSub"></div>
       </div>
 
-      <!-- Toggle vue liste / calendrier -->
       <div class="view-toggle">
         <div class="vt-btn active" id="vt-list" onclick="setView('list')">&#9776; Liste</div>
         <div class="vt-btn"        id="vt-cal"  onclick="setView('cal')">&#128197; Calendrier</div>
       </div>
 
-      <!-- Vue liste -->
       <div class="ev-list-wrap" id="evListWrap">
         <div class="ev-list" id="evList"></div>
       </div>
 
-      <!-- Vue calendrier -->
       <div class="cal-grid" id="calGrid">
         <div class="cal-dow" id="calDow"></div>
         <div class="cal-days" id="calDays"></div>
       </div>
-
-      <div class="prog hidden" id="progWrap">
-        <div class="prog-bg"><div class="prog-fill" id="progFill"></div></div>
-        <div class="prog-msg" id="progMsg">G&#233;n&#233;ration&#8230;</div>
-      </div>
     </div>
   </div>
 
-  <!-- BARRE BAS -->
   <div class="bot">
     <button class="btn btn-ghost" onclick="reset()" style="width:auto;padding:13px 14px">&#8634;</button>
     <button class="btn btn-ok" id="btnCal" disabled style="flex:1" onclick="exportICS(true)">
@@ -336,7 +321,6 @@
   </div>
 </div>
 
-<!-- PANEL PARAMETRES -->
 <div class="s-panel" id="sPanel">
   <div class="s-hdr">
     <button class="btn-x" onclick="closeSettings()">&#10005;</button>
@@ -369,6 +353,14 @@
     <button class="btn btn-danger" style="margin-bottom:20px" onclick="clearCredentials()">&#128465; Effacer les identifiants</button>
 
     <div class="s-section">Codes horaires</div>
+    <button class="s-nav-btn" onclick="openRenamePanel()" style="margin-bottom:8px">
+      <div>
+        <div class="s-nav-label">&#9999;&#65039; Renommer les codes</div>
+        <div class="s-nav-sub">Modifier le nom export&#233; dans l'agenda</div>
+      </div>
+      <div class="s-nav-arrow">&#8250;</div>
+    </button>
+    
     <button class="s-nav-btn" onclick="openCodesPanel()" style="margin-bottom:20px">
       <div>
         <div class="s-nav-label">&#128683; Codes &#224; ignorer</div>
@@ -391,7 +383,23 @@
   </div>
 </div>
 
-<!-- PANEL CODES -->
+<div class="codes-panel" id="renamePanel">
+  <div class="s-hdr">
+    <button class="btn-x" onclick="closeRenamePanel()">&#8592;</button>
+    <div class="s-hdr-title">&#9999;&#65039; Renommer les codes</div>
+  </div>
+  <div class="s-scroll">
+    <p style="font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:14px">
+      Personnalisez le nom sous lequel les journ&#233;es appara&#238;tront dans votre agenda.<br>
+      <strong style="color:var(--text)">Maintenez &#9776; pour faire glisser et r&#233;organiser l'ordre.</strong>
+    </p>
+    <div id="renameList"></div>
+    <p id="renameEmpty" style="font-size:12px;color:var(--muted);text-align:center;padding:20px 0;display:none;">
+      Aucun code connu. Importez un planning.
+    </p>
+  </div>
+</div>
+
 <div class="codes-panel" id="codesPanel">
   <div class="s-hdr">
     <button class="btn-x" onclick="closeCodesPanel()">&#8592;</button>
@@ -399,7 +407,8 @@
   </div>
   <div class="s-scroll">
     <p style="font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:14px">
-      Cochez les codes qui ne doivent <strong style="color:var(--text)">pas</strong> &#234;tre export&#233;s dans le fichier ICS (cong&#233;s, jours f&#233;ri&#233;s&#8230;)
+      Cochez les codes qui ne doivent <strong style="color:var(--text)">pas</strong> &#234;tre export&#233;s (cong&#233;s, r&#233;cups...).<br>
+      <strong style="color:var(--text)">Maintenez &#9776; pour faire glisser et r&#233;organiser l'ordre.</strong>
     </p>
 
     <div class="codes-legend">
@@ -407,15 +416,13 @@
       <div class="leg-item"><div class="leg-dot" style="background:var(--brd)"></div> Ignor&#233;</div>
     </div>
 
-    <!-- Ajout manuel -->
     <div class="codes-add-row">
       <input class="s-input" type="text" id="newCodeInput" placeholder="Ajouter un code&#8230;"
         autocorrect="off" autocapitalize="characters" style="text-transform:uppercase">
       <button class="btn btn-blue btn-sm" onclick="addCodeManual()" style="flex-shrink:0;padding:0 16px">+</button>
     </div>
 
-    <!-- Liste des codes -->
-    <div id="codesList"></div>
+    <div id="codesList" style="position:relative;"></div>
     <p id="codesEmpty" style="font-size:12px;color:var(--muted);text-align:center;padding:20px 0">
       Aucun code rencontr&#233; pour l'instant.<br>Importez un planning pour voir les codes.
     </p>
@@ -461,19 +468,23 @@ function isExcluded(code){
   for(var i=0;i<codes.length;i++){if(codes[i].code===code&&codes[i].excluded)return true;}
   return false;
 }
+
+// Appelé après le parsing du XML (Fichier local ET bridge Android)
 function registerCodes(evs){
   var codes=loadCodes();
   var existing=codes.map(function(c){return c.code;});
   var changed=false;
   evs.forEach(function(ev){
     if(ev.code&&existing.indexOf(ev.code)===-1){
-      codes.push({code:ev.code,excluded:false});
+      // Nouveau code détecté
+      codes.push({code:ev.code, excluded:false, name:""});
       existing.push(ev.code);
       changed=true;
     }
   });
-  if(changed)saveCodes(codes);
+  if(changed) saveCodes(codes);
 }
+
 function updateCodesNavSub(){
   var codes=loadCodes();
   var excl=codes.filter(function(c){return c.excluded;}).length;
@@ -481,6 +492,101 @@ function updateCodesNavSub(){
   if(excl>0)sub+=", "+excl+" ignor\u00e9(s)";
   g("codesNavSub").textContent=sub;
 }
+
+// ── GLISSER-DEPOSER (TOUCH DRAG & DROP) ──────────────────────────
+function initDrag(listId) {
+  var list = g(listId);
+  if(!list) return;
+  var dragSrc = null;
+
+  list.addEventListener('touchstart', function(e) {
+    var handle = e.target.closest('.drag-handle');
+    if (!handle) return;
+    var item = handle.closest('.code-item');
+    dragSrc = item;
+    item.classList.add('dragging');
+  }, {passive: false});
+
+  list.addEventListener('touchmove', function(e) {
+    if (!dragSrc) return;
+    e.preventDefault(); // Empêche le scroll pendant le glissement
+    var touch = e.touches[0];
+    var target = document.elementFromPoint(touch.clientX, touch.clientY);
+    var targetItem = target ? target.closest('.code-item') : null;
+    
+    if (targetItem && targetItem !== dragSrc && targetItem.parentNode === list) {
+      var rect = targetItem.getBoundingClientRect();
+      var mid = rect.top + rect.height / 2;
+      if (touch.clientY < mid) {
+        list.insertBefore(dragSrc, targetItem);
+      } else {
+        list.insertBefore(dragSrc, targetItem.nextSibling);
+      }
+    }
+  }, {passive: false});
+
+  list.addEventListener('touchend', function(e) {
+    if (!dragSrc) return;
+    dragSrc.classList.remove('dragging');
+    dragSrc = null;
+    updateOrder(listId);
+  });
+}
+
+function updateOrder(listId) {
+  var list = g(listId);
+  var newCodes = [];
+  var oldCodes = loadCodes();
+  var items = list.querySelectorAll('.code-item');
+  
+  items.forEach(function(item) {
+    var codeStr = item.getAttribute('data-code');
+    var found = oldCodes.find(function(c) { return c.code === codeStr; });
+    if (found) newCodes.push(found);
+  });
+  saveCodes(newCodes);
+  
+  // Re-render pour s'assurer que les index internes correspondent visuellement
+  if(listId === 'codesList') renderCodesList();
+  if(listId === 'renameList') renderRenameList();
+}
+
+// ── PANNEAU RENOMMER ─────────────────────────────────────────────
+function openRenamePanel(){
+  renderRenameList();
+  g("renamePanel").classList.add("open");
+}
+function closeRenamePanel(){
+  g("renamePanel").classList.remove("open");
+}
+function renderRenameList(){
+  var codes=loadCodes();
+  var list=g("renameList");
+  var empty=g("renameEmpty");
+  if(codes.length===0){list.innerHTML="";empty.style.display="block";return;}
+  empty.style.display="none";
+  
+  list.innerHTML=codes.map(function(c){
+    var defaultName = "Travail - " + c.code;
+    var currentName = c.name || defaultName;
+    return '<div class="code-item" data-code="'+c.code+'">'
+      +'<div class="drag-handle" title="Glisser pour réorganiser">&#9776;</div>'
+      +'<span class="code-badge">'+c.code+'</span>'
+      +'<input type="text" class="rename-input" placeholder="'+defaultName+'" value="'+currentName.replace(/"/g, '&quot;')+'" onchange="updateCodeName(\''+c.code+'\',this.value)">'
+      +'</div>';
+  }).join("");
+}
+
+function updateCodeName(codeStr, val){
+  var codes=loadCodes();
+  var c = codes.find(function(x){return x.code === codeStr;});
+  if(c) {
+    c.name = val.trim();
+    saveCodes(codes);
+  }
+}
+
+// ── PANNEAU IGNORER ──────────────────────────────────────────────
 function openCodesPanel(){
   renderCodesList();
   g("codesPanel").classList.add("open");
@@ -495,38 +601,29 @@ function renderCodesList(){
   var empty=g("codesEmpty");
   if(codes.length===0){list.innerHTML="";empty.style.display="block";return;}
   empty.style.display="none";
-  list.innerHTML=codes.map(function(c,i){
-    return '<div class="code-item'+(c.excluded?" excl-item":"")+'" id="ci-'+i+'">'
+  list.innerHTML=codes.map(function(c){
+    return '<div class="code-item'+(c.excluded?" excl-item":"")+'" data-code="'+c.code+'">'
+      +'<div class="drag-handle" title="Glisser pour réorganiser">&#9776;</div>'
       +'<span class="code-badge">'+c.code+'</span>'
       +'<span class="code-label">'+(c.excluded?'<em style="color:var(--muted)">Ignor\u00e9</em>':'Export\u00e9')+'</span>'
-      +'<div class="code-arrows">'
-      +'<button class="code-arrow" onclick="moveCode('+i+',-1)">&#8679;</button>'
-      +'<button class="code-arrow" onclick="moveCode('+i+',1)">&#8681;</button>'
-      +'</div>'
-      +'<input type="checkbox" class="code-cb" title="Ignorer ce code"'+(c.excluded?" checked":"")+' onchange="toggleExcluded('+i+',this.checked)">'
-      +'<button class="code-del" onclick="removeCode('+i+')" title="Supprimer">&#128465;</button>'
+      +'<input type="checkbox" class="code-cb" title="Ignorer ce code"'+(c.excluded?" checked":"")+' onchange="toggleExcluded(\''+c.code+'\',this.checked)">'
+      +'<button class="code-del" onclick="removeCode(\''+c.code+'\')" title="Supprimer">&#128465;</button>'
       +'</div>';
   }).join("");
 }
-function toggleExcluded(idx,val){
+function toggleExcluded(codeStr, val){
   var codes=loadCodes();
-  if(codes[idx])codes[idx].excluded=val;
+  var c = codes.find(function(x){return x.code===codeStr;});
+  if(c) c.excluded = val;
   saveCodes(codes);
   renderCodesList();
 }
-function moveCode(idx,dir){
+function removeCode(codeStr){
   var codes=loadCodes();
-  var newIdx=idx+dir;
-  if(newIdx<0||newIdx>=codes.length)return;
-  var tmp=codes[idx];codes[idx]=codes[newIdx];codes[newIdx]=tmp;
+  codes = codes.filter(function(x){return x.code!==codeStr;});
   saveCodes(codes);
   renderCodesList();
-}
-function removeCode(idx){
-  var codes=loadCodes();
-  codes.splice(idx,1);
-  saveCodes(codes);
-  renderCodesList();
+  if(g("renamePanel").classList.contains("open")) renderRenameList();
 }
 function addCodeManual(){
   var input=g("newCodeInput");
@@ -536,7 +633,7 @@ function addCodeManual(){
   if(codes.find(function(c){return c.code===code;})){
     toast("Code d\u00e9j\u00e0 pr\u00e9sent","warn");return;
   }
-  codes.push({code:code,excluded:false});
+  codes.push({code:code,excluded:false, name:""});
   saveCodes(codes);
   input.value="";
   renderCodesList();
@@ -568,13 +665,12 @@ function clearCredentials(){
   g("credUser").value="";g("credPass").value="";g("autoLoginToggle").checked=false;
   toast("\ud83d\uddd1\ufe0f Identifiants effac\u00e9s","ok");
 }
-// Confirm exit toggle auto-save (live)
 g("confirmExitToggle").addEventListener("change",function(){
   localStorage.setItem("tcs_confirm_exit",this.checked?"1":"0");
   if(window.Android&&window.Android.setConfirmExit)window.Android.setConfirmExit(this.checked);
 });
 
-// ── TABS ─────────────────────────────────────────────────────────
+// ── TABS & NAV ───────────────────────────────────────────────────
 function switchTab(mode){
   var s=mode==="site";
   g("itab-site").classList.toggle("active",s);
@@ -582,8 +678,6 @@ function switchTab(mode){
   g("pane-site").classList.toggle("hidden",!s);
   g("pane-file").classList.toggle("hidden",s);
 }
-
-// ── TCS NAV ───────────────────────────────────────────────────────
 function openTCS(){
   var user=localStorage.getItem("tcs_user")||"";
   var pass=localStorage.getItem("tcs_pass")||"";
@@ -594,8 +688,6 @@ function openTCS(){
     window.Android.loadTCSPage();
   }
 }
-
-// ── FILE PICKER ───────────────────────────────────────────────────
 function pickFile(src){var input=g("fi-file");input.value="";input.click();}
 g("fi-file").onchange=function(){handleFile(g("fi-file").files[0]);};
 
@@ -625,7 +717,7 @@ function handleFile(file){
       var evs=parseXML(e.target.result);
       if(!evs.length){toast("\u26a0\ufe0f Aucun \u00e9v\u00e9nement trouv\u00e9","warn");return;}
       events=evs;
-      registerCodes(evs);
+      registerCodes(evs); // Apprentissage fichier local
       showPreview(evs);
       toast("\u2705 "+evs.length+" \u00e9v\u00e9nements charg\u00e9s");
       if(window.Android&&window.Android.onXmlLoaded)window.Android.onXmlLoaded(evs.length);
@@ -634,7 +726,7 @@ function handleFile(file){
   reader.readAsText(file,"UTF-8");
 }
 
-// ── VIEW TOGGLE ───────────────────────────────────────────────────
+// ── VIEW TOGGLE & PREVIEW ─────────────────────────────────────────
 var currentView="list";
 function setView(v){
   currentView=v;
@@ -644,7 +736,6 @@ function setView(v){
   g("calGrid").classList.toggle("active",v==="cal");
 }
 
-// ── SHOW PREVIEW ──────────────────────────────────────────────────
 function showPreview(evs){
   var parts=evs[0].date.split("/");
   var moName=MOIS[parseInt(parts[1])-1];
@@ -656,7 +747,6 @@ function showPreview(evs){
   g("evCount").textContent=totalExported;
   g("evSub").textContent=totalIgnored>0?totalIgnored+" jour(s) ignor\u00e9(s) non export\u00e9(s)":"";
 
-  // Liste
   g("evList").innerHTML=evs.map(function(ev){
     var p=ev.date.split("/");
     var d=normTime(ev.debut)||"\u2014",f=normTime(ev.fin)||"\u2014";
@@ -670,7 +760,6 @@ function showPreview(evs){
       +badge+"</div>";
   }).join("");
 
-  // Calendrier
   renderCalendar(evs, parseInt(parts[1])-1, parseInt(parts[2]));
 
   g("card1").className="card done";
@@ -679,13 +768,10 @@ function showPreview(evs){
   g("card2").scrollIntoView({behavior:"smooth",block:"start"});
 }
 
-// ── CALENDAR GRID ─────────────────────────────────────────────────
 function renderCalendar(evs, month, year){
-  // En-têtes jours
   var dowEl=g("calDow");
   dowEl.innerHTML=DOW.map(function(d){return "<div class='cal-dow-cell'>"+d+"</div>";}).join("");
 
-  // Map date → events
   var byDay={};
   evs.forEach(function(ev){
     var d=ev.date.split("/")[0];
@@ -694,14 +780,12 @@ function renderCalendar(evs, month, year){
     byDay[key].push(ev);
   });
 
-  // Premier jour du mois (0=dim, ajuste pour lun=0)
   var firstDow=(new Date(year,month,1).getDay()+6)%7;
   var daysInMonth=new Date(year,month+1,0).getDate();
   var today=new Date();
 
   var daysEl=g("calDays");
   var html="";
-  // Cases vides avant le 1er
   for(var i=0;i<firstDow;i++)html+="<div class='cal-day empty'></div>";
 
   for(var d=1;d<=daysInMonth;d++){
@@ -744,17 +828,26 @@ function buildICS(evs){
     "TZOFFSETFROM:+0200","TZOFFSETTO:+0100","TZNAME:CET","END:STANDARD",
     "BEGIN:DAYLIGHT","DTSTART:19700329T020000","RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=3",
     "TZOFFSETFROM:+0100","TZOFFSETTO:+0200","TZNAME:CEST","END:DAYLIGHT","END:VTIMEZONE"];
+  
+  var codesConfig = loadCodes();
+
   evs.forEach(function(ev,i){
-    if(isExcluded(ev.code))return; // NE PAS EXPORTER
+    if(isExcluded(ev.code))return;
+    
+    // Récupérer le nom personnalisé s'il existe
+    var cnf = codesConfig.find(function(x){return x.code===ev.code;});
+    var evName = (cnf && cnf.name) ? cnf.name : ("Travail - " + ev.code);
+
     var p=ev.date.split("/");
     var deb=normTime(ev.debut),fin=normTime(ev.fin);
     var notes=[ev.memo,ev.sousCode].filter(Boolean).join("\\n");
+    
     lines.push("BEGIN:VEVENT",
       "UID:tcs-"+ev.date.replace(/\//g,"-")+"-"+ev.code+"-"+i+"@eqso.be",
       "DTSTAMP:"+ds,
       deb&&fin?"DTSTART;TZID=Europe/Brussels:"+dt(ev.date,ev.debut):"DTSTART;VALUE=DATE:"+p[2]+pad(p[1])+pad(p[0]),
       deb&&fin?"DTEND;TZID=Europe/Brussels:"+dt(ev.date,ev.fin):"DTEND;VALUE=DATE:"+p[2]+pad(p[1])+pad(p[0]),
-      "SUMMARY:"+esc("Travail - "+ev.code));
+      "SUMMARY:"+esc(evName));
     if(ev.structure)lines.push("LOCATION:"+esc(ev.structure));
     if(notes)lines.push("DESCRIPTION:"+notes);
     lines.push("END:VEVENT");
@@ -781,7 +874,6 @@ function exportICS(openCal){
   }
 }
 
-// ── RESET ─────────────────────────────────────────────────────────
 function reset(){
   events=[];
   g("card1").className="card active";
@@ -796,7 +888,11 @@ var n=new Date();
 g("moLbl").textContent=MOIS[n.getMonth()];
 g("yrLbl").textContent=n.getFullYear();
 updateCodesNavSub();
-// Envoyer le réglage confirm exit au bridge Android au démarrage
+
+// Initialisation du drag and drop pour les deux listes
+initDrag('codesList');
+initDrag('renameList');
+
 var initCE=localStorage.getItem("tcs_confirm_exit")==="1";
 if(window.Android&&window.Android.setConfirmExit)window.Android.setConfirmExit(initCE);
 </script>
