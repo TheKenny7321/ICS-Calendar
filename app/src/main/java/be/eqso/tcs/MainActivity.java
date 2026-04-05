@@ -123,7 +123,7 @@ public class MainActivity extends AppCompatActivity {
         }).start();
     }
 
-// ── 1. La méthode de chargement mise à jour ──────────────────────────────
+    // ── Charger index.html puis injecter le XML ───────────────────────────────
     private void loadHomeAndInject(final String safeXml) {
         onTCSPage = false;        // on quitte le site TCS
         webView.stopLoading();
@@ -139,9 +139,6 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 if (!url.contains("android_asset")) return;
-                
-                // CRUCIAL : On remet le client par défaut pour que le bouton 
-                // apparaisse quand on retournera sur RHTime plus tard.
                 webView.setWebViewClient(defaultClient());
 
                 mainHandler.postDelayed(() -> {
@@ -154,6 +151,7 @@ public class MainActivity extends AppCompatActivity {
                         "    return;" +
                         "  }" +
                         "  events=evs;" +
+                        // FIX: On ajoute l'appel pour apprendre les codes automatiquement !
                         "  if(typeof registerCodes === 'function') registerCodes(evs);" +
                         "  showPreview(evs);" +
                         "  Android.onXmlLoaded(evs.length);" +
@@ -165,58 +163,6 @@ public class MainActivity extends AppCompatActivity {
                 }, 800);
             }
         });
-    }
-
-    // ── 2. Le client unique (Fusionné) ────────────────────────────────────────
-    private WebViewClient defaultClient() {
-        return new WebViewClient() {
-            @Override
-            public void onPageFinished(WebView view, String url) {
-                super.onPageFinished(view, url);
-                
-                // Injection Autologin (votre logique existante)
-                if (autoLoginUser != null && autoLoginPass != null 
-                    && url.contains("tcs.eqso.be") && !url.contains("RHTime/RHTIME_Planning")) {
-                    String js = "document.getElementById('donnee_user').value='" + autoLoginUser + "';" +
-                                "document.getElementById('donnee_pass').value='" + autoLoginPass + "';" +
-                                "document.forms[0].submit();";
-                    view.evaluateJavascript(js, null);
-                }
-
-                // Injection du BOUTON "Exporter ce mois"
-                if (url.contains("RHTime/RHTIME_Planning")) {
-                    injectExportButton(view);
-                }
-            }
-        };
-    }
-
-    // ── 3. La logique du bouton ──────────────────────────────────────────────
-    private void injectExportButton(WebView view) {
-        String js = "(function() {" +
-                "  if (document.getElementById('quick-export-btn')) return;" +
-                "  " +
-                "  var parts = window.location.href.split('/');" +
-                "  var sessionId = parts[parts.length-2];" +
-                "  var exportUrl = 'https://tcs.eqso.be/RHTime/RHTIME_Planning/' + sessionId + '/export.xml?WD_ACTION_=EXPORTXML&A9';" +
-                "  " +
-                "  var btn = document.createElement('div');" +
-                "  btn.id = 'quick-export-btn';" +
-                "  btn.innerHTML = '📅 Exporter ce mois';" +
-                "  btn.style = 'position:fixed; bottom:25px; left:50%; transform:translateX(-50%); " +
-                "               background:#2563eb; color:white; padding:14px 25px; border-radius:30px; " +
-                "               font-weight:bold; font-family:sans-serif; z-index:99999; " +
-                "               box-shadow:0 6px 20px rgba(0,0,0,0.4); border:2px solid rgba(255,255,255,0.2)';" +
-                "  " +
-                "  btn.onclick = function() {" +
-                "    this.style.background = '#10b981';" +
-                "    this.innerHTML = '⏳ Génération...';" +
-                "    window.location.href = exportUrl;" +
-                "  };" +
-                "  " +
-                "  document.body.appendChild(btn);" +
-                "})();";
-        view.evaluateJavascript(js, null);
     }
 
     private WebViewClient defaultClient() {
