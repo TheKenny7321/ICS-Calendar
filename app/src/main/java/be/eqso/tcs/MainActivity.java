@@ -40,13 +40,11 @@ public class MainActivity extends AppCompatActivity {
     private ValueCallback<Uri[]> filePathCallback;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
-    // Credentials autologin (passés depuis le JS)
     private String  autoLoginUser  = null;
     private String  autoLoginPass  = null;
     private boolean confirmExit    = false;
     private long    lastBackPress  = 0;
 
-    // ── File picker manuel ────────────────────────────────────────────────────
     private final ActivityResultLauncher<Intent> filePickerLauncher =
         registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
             if (filePathCallback == null) return;
@@ -59,8 +57,6 @@ public class MainActivity extends AppCompatActivity {
             filePathCallback = null;
         });
 
-    // ── Téléchargement direct sans DownloadManager ────────────────────────────
-    // Appelé depuis le JavascriptInterface quand le site déclenche un téléchargement
     private void downloadXmlDirectly(final String urlStr, final String cookies) {
         Toast.makeText(this, "⬇️ Récupération du planning…", Toast.LENGTH_SHORT).show();
 
@@ -87,7 +83,6 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
 
-                // Lire la réponse
                 InputStream is = conn.getInputStream();
                 ByteArrayOutputStream bos = new ByteArrayOutputStream();
                 byte[] buf = new byte[4096];
@@ -99,7 +94,6 @@ public class MainActivity extends AppCompatActivity {
                 String xml = bos.toString("UTF-8");
                 Log.d(TAG, "XML downloaded, length=" + xml.length());
 
-                // Vérifier que c'est bien du XML
                 String trimmed = xml.trim();
                 if (!trimmed.startsWith("<") || trimmed.toLowerCase().startsWith("<!doctype html")) {
                     mainHandler.post(() -> Toast.makeText(MainActivity.this,
@@ -108,7 +102,6 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
 
-                // Injecter directement dans la page
                 final String safe = xml
                     .replace("\\", "\\\\")
                     .replace("`",  "\\`")
@@ -124,7 +117,6 @@ public class MainActivity extends AppCompatActivity {
         }).start();
     }
 
-    // ── Charger index.html puis injecter le XML ───────────────────────────────
     private void loadHomeAndInject(final String safeXml) {
         webView.stopLoading();
         webView.clearHistory();
@@ -172,31 +164,25 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onPageFinished(WebView view, String url) {
-                // Injecter l'autologin uniquement sur la page de login TCS
-                // (pas sur index.html ni sur les pages déjà connectées)
                 if (autoLoginUser != null && autoLoginPass != null
                         && url.contains("tcs.eqso.be")
                         && !url.contains("RHTime/RHTIME_Planning")) {
 
                     Log.d(TAG, "Injecting autologin on: " + url);
 
-                    // Échapper les valeurs pour JS
                     String safeUser = autoLoginUser.replace("\\", "\\\\").replace("'", "\\'");
                     String safePass = autoLoginPass.replace("\\", "\\\\").replace("'", "\\'");
 
-                    // Script universel : trouve tous les inputs visibles,
-                    // le 1er text = login, le 1er password = mdp, puis cherche le bouton submit
                     String js =
                         "(function(){" +
                         "var MAX=10,tries=0;" +
                         "function fill(){" +
                         "  tries++;" +
-                        // Tous les inputs texte visibles non désactivés
                         "  var all=[].slice.call(document.querySelectorAll('input'));" +
                         "  var texts=all.filter(function(i){" +
                         "    return (i.type==='text'||i.type==='email'||i.type==='')" +
                         "      &&!i.disabled&&!i.readOnly" +
-                        "      &&i.offsetParent!==null;" +  // visible
+                        "      &&i.offsetParent!==null;" +
                         "  });" +
                         "  var passes=all.filter(function(i){" +
                         "    return i.type==='password'&&!i.disabled&&i.offsetParent!==null;" +
@@ -208,16 +194,13 @@ public class MainActivity extends AppCompatActivity {
                         "  var u=texts[0],p=passes[0];" +
                         "  u.value='" + safeUser + "';" +
                         "  p.value='" + safePass + "';" +
-                        // Déclencher les événements pour que WinDev détecte le changement
                         "  ['input','change','keyup','blur'].forEach(function(ev){" +
                         "    u.dispatchEvent(new Event(ev,{bubbles:true}));" +
                         "    p.dispatchEvent(new Event(ev,{bubbles:true}));" +
                         "  });" +
-                        // Chercher le bouton submit
                         "  var btn=document.querySelector(" +
                         "    'input[type=submit],button[type=submit]');" +
                         "  if(!btn){" +
-                        // Fallback : chercher un élément cliquable contenant "connect" ou "login"
                         "    var elems=[].slice.call(document.querySelectorAll('a,button,input[type=button],[onclick]'));" +
                         "    btn=elems.find(function(e){" +
                         "      var t=(e.textContent||e.value||'').toLowerCase();" +
@@ -228,7 +211,6 @@ public class MainActivity extends AppCompatActivity {
                         "  if(btn){" +
                         "    setTimeout(function(){btn.click();},500);" +
                         "  } else {" +
-                        // Dernier recours : soumettre le formulaire parent
                         "    var f=u.closest('form');" +
                         "    if(f)setTimeout(function(){f.submit();},500);" +
                         "  }" +
@@ -244,7 +226,6 @@ public class MainActivity extends AppCompatActivity {
         };
     }
 
-    // ── Lifecycle ─────────────────────────────────────────────────────────────
     @SuppressLint({"SetJavaScriptEnabled", "JavascriptInterface"})
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -290,14 +271,12 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Intercepter les téléchargements → télécharger en Java directement
         webView.setDownloadListener((url, userAgent, contentDisposition, mimeType, length) -> {
             Log.d(TAG, "Download intercepted: " + url);
-            // Récupérer les cookies actuels de la WebView
             android.webkit.CookieManager cm = android.webkit.CookieManager.getInstance();
             String cookies = cm.getCookie(url);
             if (cookies == null) cookies = "";
-            downloadXmlDirectly(url, cookies != null ? cookies : "");
+            downloadXmlDirectly(url, cookies);
         });
 
         webView.loadUrl("file:///android_asset/index.html");
@@ -305,11 +284,6 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
-        // Priorité 1 : panel codes ouvert → fermer
-        // Priorité 2 : panel settings ouvert → fermer
-        // Priorité 3 : WebView peut reculer → goBack
-        // Priorité 4 : confirm exit activé → double press
-        // Priorité 5 : quitter
         webView.evaluateJavascript(
             "(function(){" +
             "  if(document.getElementById('codesPanel')&&document.getElementById('codesPanel').classList.contains('open'))return 'codes';" +
@@ -317,14 +291,20 @@ public class MainActivity extends AppCompatActivity {
             "  return 'none';" +
             "})()",
             result -> {
-                if (""codes"".equals(result)) {
+
+                String clean = result != null ? result.replace("\"", "") : "";
+
+                if ("codes".equals(clean)) {
                     mainHandler.post(() ->
                         webView.evaluateJavascript("closeCodesPanel();", null));
-                } else if (""settings"".equals(result)) {
+
+                } else if ("settings".equals(clean)) {
                     mainHandler.post(() ->
                         webView.evaluateJavascript("closeSettings();", null));
+
                 } else if (webView.canGoBack()) {
                     mainHandler.post(() -> webView.goBack());
+
                 } else if (confirmExit) {
                     long now = System.currentTimeMillis();
                     if (now - lastBackPress < 2000) {
@@ -335,6 +315,7 @@ public class MainActivity extends AppCompatActivity {
                             webView.evaluateJavascript(
                                 "toast('Appuyez encore une fois pour quitter','info',2000);", null));
                     }
+
                 } else {
                     mainHandler.post(() -> MainActivity.super.onBackPressed());
                 }
@@ -342,7 +323,6 @@ public class MainActivity extends AppCompatActivity {
         );
     }
 
-    // ── Bridge JS ↔ Android ───────────────────────────────────────────────────
     public class AndroidBridge {
 
         @JavascriptInterface
@@ -352,41 +332,7 @@ public class MainActivity extends AppCompatActivity {
                 "✅ " + count + " événements chargés !", Toast.LENGTH_SHORT).show());
         }
 
-        @JavascriptInterface
-        public void onIcsExported() { }
-
-        @JavascriptInterface
-        public void saveAndOpenICS(String icsContent, String filename, boolean openCal) {
-            mainHandler.post(() -> {
-                try {
-                    File dir = new File(getCacheDir(), "ics");
-                    if (!dir.exists()) dir.mkdirs();
-                    File f = new File(dir, filename);
-                    try (FileOutputStream fos = new FileOutputStream(f)) {
-                        fos.write(icsContent.getBytes(StandardCharsets.UTF_8));
-                    }
-                    Uri uri = FileProvider.getUriForFile(
-                        MainActivity.this, getPackageName() + ".fileprovider", f);
-                    Intent intent = openCal
-                        ? new Intent(Intent.ACTION_VIEW)
-                        : new Intent(Intent.ACTION_SEND);
-                    if (openCal) {
-                        intent.setDataAndType(uri, "text/calendar");
-                    } else {
-                        intent.setType("text/calendar");
-                        intent.putExtra(Intent.EXTRA_STREAM, uri);
-                        intent.putExtra(Intent.EXTRA_SUBJECT, "Horaire TCS");
-                    }
-                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION |
-                                    Intent.FLAG_ACTIVITY_NEW_TASK);
-                    startActivity(Intent.createChooser(intent,
-                        openCal ? "Ouvrir avec…" : "Partager…"));
-                } catch (Exception e) {
-                    Toast.makeText(MainActivity.this,
-                        "Erreur ICS : " + e.getMessage(), Toast.LENGTH_LONG).show();
-                }
-            });
-        }
+        @JavascriptInterface public void onIcsExported() {}
 
         @JavascriptInterface
         public void showToast(String msg) {
@@ -397,24 +343,18 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface
         public void setConfirmExit(boolean value) {
             confirmExit = value;
-            Log.d(TAG, "confirmExit=" + value);
         }
 
         @JavascriptInterface
         public void setAutoLoginCredentials(String user, String pass) {
             autoLoginUser = user;
             autoLoginPass = pass;
-            Log.d(TAG, "AutoLogin credentials set for user: " + user);
         }
 
         @JavascriptInterface
         public void loadTCSPage() {
-            // Charger le site TCS directement dans la WebView
-            // (pas dans une iframe — pour que onPageFinished et l'autologin fonctionnent)
-            mainHandler.post(() -> {
-                webView.stopLoading();
-                webView.loadUrl("https://tcs.eqso.be/RHTime");
-            });
+            mainHandler.post(() ->
+                webView.loadUrl("https://tcs.eqso.be/RHTime"));
         }
 
         @JavascriptInterface
