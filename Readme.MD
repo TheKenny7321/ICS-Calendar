@@ -14,7 +14,7 @@
 
 ## ⚙️ Nouvelles options de personnalisation
 
-La version 3.1 introduit des outils puissants dans les **Paramètres** pour nettoyer et organiser votre agenda :
+La version 3 introduit des outils puissants dans les **Paramètres** pour nettoyer et organiser votre agenda :
 
 * **🚫 Codes à ignorer** : Ne polluez plus votre calendrier avec des informations inutiles.
     > *Exemple : Ajoutez "F" ou "VA" à la liste pour que ces journées ne créent pas d'événements vides.*
@@ -22,7 +22,7 @@ La version 3.1 introduit des outils puissants dans les **Paramètres** pour nett
     > *Exemple : Transformez automatiquement le code "FOR" en "Formation".*
 * **🗓️ Vue Aperçu** : L'application intègre désormais un **mini-calendrier** lors de la conversion. Cela vous permet de valider d'un coup d'œil que toutes vos prestations ont bien été capturées avant l'export final.
 
-### Autres ajouts de la v3.1
+### Autres ajouts de la V3
 * **🔒 Confirmation avant de quitter** : Une sécurité supplémentaire dans le navigateur intégré pour éviter de perdre votre session RHTime par erreur.
 
 ---
