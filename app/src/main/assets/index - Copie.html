@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#0a0f1e">
+  <title>TCS Calendar</title>
+  <style>
+    :root{
+      --bg:#0a0f1e;--surf:#0f1829;--surf2:#141f33;--brd:#1a2840;
+      --blue:#2563eb;--bluL:#3b82f6;--cyan:#06b6d4;
+      --text:#eef2ff;--muted:#4e6080;
+      --ok:#10b981;--warn:#f59e0b;--err:#ef4444;--r:14px;
+    }
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
+      font-family:-apple-system,"Segoe UI",sans-serif}
+    body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+      background-image:linear-gradient(rgba(37,99,235,.03) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(37,99,235,.03) 1px,transparent 1px);
+      background-size:28px 28px}
+    .app{height:100%;display:flex;flex-direction:column}
+
+    /* HEADER */
+    .hdr{padding:16px 20px 0;flex-shrink:0;display:flex;align-items:center;justify-content:space-between}
+    .brand{display:flex;align-items:center;gap:10px}
+    .brand-ico{width:40px;height:40px;border-radius:11px;flex-shrink:0;
+      background:linear-gradient(135deg,var(--blue),var(--cyan));
+      display:flex;align-items:center;justify-content:center;font-size:19px;
+      box-shadow:0 4px 18px rgba(37,99,235,.45)}
+    .brand-name{font-size:20px;font-weight:800;letter-spacing:-.5px;
+      background:linear-gradient(90deg,#fff,var(--cyan));
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .brand-sub{font-size:10px;color:var(--muted);margin-top:1px}
+    .hdr-right{display:flex;align-items:center;gap:8px}
+    .month-pill{background:var(--surf2);border:1px solid var(--brd);
+      border-radius:10px;padding:6px 12px;text-align:right}
+    .month-pill .mo{font-size:12px;font-weight:700}
+    .month-pill .yr{font-size:10px;color:var(--muted)}
+    
+    /* BOUTON SETTINGS CORRIGÉ */
+    .settings-btn{width:36px;height:36px;border-radius:10px;border:1px solid var(--brd);
+      background:var(--surf2);cursor:pointer;display:flex;align-items:center;
+      justify-content:center;flex-shrink:0;transition:border-color .2s,background .2s;padding:0}
+    .settings-btn:active{background:var(--surf);border-color:var(--bluL)}
+    .settings-btn svg{width:20px;height:20px;stroke:var(--muted);fill:none;
+      stroke-width:2;stroke-linecap:round;stroke-linejoin:round;display:block}
+
+    /* TABS */
+    .tabs{display:flex;gap:6px;padding:14px 20px 0;flex-shrink:0}
+    .itab{flex:1;padding:9px 4px;border-radius:10px;border:1px solid var(--brd);
+      background:var(--surf);font-size:12px;font-weight:700;color:var(--muted);
+      cursor:pointer;text-align:center;transition:all .2s}
+    .itab.active{background:#122044;border-color:var(--bluL);color:var(--text)}
+
+    /* SCROLL */
+    .scroll{flex:1;overflow-y:auto;padding:14px 20px;
+      padding-bottom:100px;-webkit-overflow-scrolling:touch}
+
+    /* CARDS */
+    .card{background:var(--surf);border:1px solid var(--brd);border-radius:var(--r);
+      padding:16px 18px;margin-bottom:10px;position:relative;overflow:hidden}
+    .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
+      background:var(--brd);transition:background .3s}
+    .card.active::before{background:var(--bluL)}
+    .card.done::before{background:var(--ok)}
+    .card.active{border-color:#1a3060}
+    .c-hdr{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+    .step-n{width:26px;height:26px;border-radius:50%;flex-shrink:0;background:var(--brd);
+      display:flex;align-items:center;justify-content:center;font-size:11px;
+      font-weight:700;color:var(--muted)}
+    .card.active .step-n{background:var(--blue);color:#fff}
+    .card.done .step-n{background:var(--ok);color:#fff}
+    .c-title{font-size:13px;font-weight:700}
+    .c-desc{font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:12px}
+
+    /* BUTTONS */
+    .btn{display:flex;align-items:center;justify-content:center;gap:8px;
+      width:100%;padding:13px;border-radius:11px;border:none;cursor:pointer;
+      font-size:13px;font-weight:700;transition:all .15s}
+    .btn:active{transform:scale(.97)}
+    .btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
+    .btn+.btn{margin-top:8px}
+    .btn-blue{background:linear-gradient(135deg,var(--blue),#1b3ba8);color:#fff;
+      box-shadow:0 4px 18px rgba(37,99,235,.35)}
+    .btn-ok{background:linear-gradient(135deg,var(--ok),#059669);color:#fff;
+      box-shadow:0 4px 18px rgba(16,185,129,.3)}
+    .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--brd)}
+    .btn-danger{background:transparent;color:var(--err);border:1px solid rgba(239,68,68,.3)}
+    .btn-sm{padding:6px 12px;font-size:11px;border-radius:7px;width:auto}
+
+    /* DROP */
+    .drop{border:2px dashed var(--brd);border-radius:11px;padding:24px 16px;
+      text-align:center;cursor:pointer;color:var(--muted)}
+    .drop-ico{font-size:28px;margin-bottom:6px}
+    .drop-txt{font-size:12px;line-height:1.6}
+    .drop-hint{font-size:10px;color:var(--bluL);font-weight:700;margin-top:3px}
+
+    /* PREVIEW EVENTS */
+    .ev-box{background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);
+      border-radius:11px;padding:12px 16px;margin-bottom:10px}
+    .ev-count{font-size:30px;font-weight:800;color:var(--ok);line-height:1}
+    .ev-lbl{font-size:10px;color:var(--muted);margin-top:1px}
+    .ev-month{font-size:12px;color:var(--text);margin-top:5px;font-weight:600}
+    .ev-sub{font-size:10px;color:var(--muted);margin-top:2px}
+
+    /* View toggle */
+    .view-toggle{display:flex;gap:4px;margin-bottom:10px}
+    .vt-btn{flex:1;padding:7px;border-radius:8px;border:1px solid var(--brd);
+      background:var(--surf2);font-size:11px;font-weight:700;color:var(--muted);
+      cursor:pointer;text-align:center;transition:all .2s}
+    .vt-btn.active{background:#122044;border-color:var(--bluL);color:var(--text)}
+
+    /* Event list */
+    .ev-list{max-height:200px;overflow-y:auto;margin:0}
+    .ev-item{display:flex;align-items:center;gap:8px;padding:6px 8px;
+      border-bottom:1px solid var(--brd);font-size:11px;border-radius:6px;margin-bottom:2px}
+    .ev-item:last-child{border-bottom:none}
+    .ev-item.excluded{background:rgba(100,116,139,.08);opacity:.55}
+    .ev-date{color:var(--muted);width:44px;flex-shrink:0}
+    .ev-code{font-weight:700;width:38px;flex-shrink:0;font-size:10px;
+      padding:2px 5px;border-radius:4px;text-align:center;background:rgba(37,99,235,.15);color:var(--bluL)}
+    .ev-item.excluded .ev-code{background:rgba(100,116,139,.15);color:var(--muted);text-decoration:line-through}
+    .ev-time{color:var(--text);flex:1}
+    .ev-item.excluded .ev-time{text-decoration:line-through;color:var(--muted)}
+    .ev-loc{color:var(--muted);font-size:10px;max-width:80px;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .ev-ign-badge{font-size:9px;color:var(--muted);background:var(--surf2);
+      border:1px solid var(--brd);border-radius:4px;padding:1px 4px;flex-shrink:0}
+
+    /* CALENDAR GRID */
+    .cal-grid{display:none}
+    .cal-grid.active{display:block}
+    .ev-list-wrap.hidden{display:none}
+    .cal-dow{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px}
+    .cal-dow-cell{text-align:center;font-size:9px;font-weight:700;
+      color:var(--muted);padding:3px 0}
+    .cal-days{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+    .cal-day{min-height:38px;border-radius:8px;padding:3px;
+      display:flex;flex-direction:column;align-items:center;
+      font-size:10px;position:relative;border:1px solid transparent}
+    .cal-day.empty{background:transparent}
+    .cal-day.today{border-color:var(--bluL)}
+    .cal-day-num{font-size:10px;color:var(--muted);font-weight:600;margin-bottom:2px}
+    .cal-day.has-event .cal-day-num{color:var(--text)}
+    .cal-day.has-event{background:rgba(37,99,235,.12);border-color:rgba(37,99,235,.2)}
+    .cal-day.all-excluded{background:rgba(100,116,139,.08);border-color:rgba(100,116,139,.15)}
+    .cal-day.all-excluded .cal-day-num{color:var(--muted)}
+    .cal-code{font-size:8px;font-weight:700;padding:1px 3px;border-radius:3px;
+      background:var(--blue);color:#fff;max-width:100%;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%;text-align:center}
+    .cal-code.excl{background:var(--brd);color:var(--muted);text-decoration:line-through}
+    .cal-time{font-size:8px;color:var(--muted);margin-top:1px}
+
+    /* BOTTOM */
+    .bot{position:fixed;bottom:0;left:0;right:0;
+      background:rgba(10,15,30,.97);backdrop-filter:blur(20px);
+      border-top:1px solid var(--brd);padding:10px 20px 20px;display:flex;gap:8px}
+
+    /* PANELS COMMUNS */
+    .s-panel, .codes-panel{position:fixed;inset:0;background:var(--bg);
+      display:flex;flex-direction:column}
+    .s-panel{z-index:600;transform:translateX(100%);transition:transform .3s cubic-bezier(.16,1,.3,1)}
+    .codes-panel{z-index:700;transform:translateX(100%);transition:transform .3s cubic-bezier(.16,1,.3,1)}
+    .s-panel.open, .codes-panel.open{transform:none}
+    .s-hdr{display:flex;align-items:center;gap:12px;
+      padding:16px 18px;background:var(--surf);border-bottom:1px solid var(--brd);flex-shrink:0}
+    .s-hdr-title{flex:1;font-size:15px;font-weight:700}
+    .btn-x{background:var(--brd);border:none;color:var(--text);
+      width:30px;height:30px;border-radius:7px;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+    .s-scroll{flex:1;overflow-y:auto;padding:20px 18px}
+    .s-section{font-size:10px;font-weight:700;text-transform:uppercase;
+      letter-spacing:.08em;color:var(--muted);margin:0 0 10px}
+    .s-card{background:var(--surf);border:1px solid var(--brd);border-radius:12px;
+      padding:16px;margin-bottom:16px}
+    .s-field{margin-bottom:12px}
+    .s-label{font-size:11px;color:var(--muted);margin-bottom:5px;display:block;font-weight:600}
+    .s-input{width:100%;background:var(--surf2);border:1px solid var(--brd);
+      border-radius:8px;padding:11px 12px;color:var(--text);font-size:13px;
+      outline:none;-webkit-appearance:none;transition:border-color .2s}
+    .s-input:focus{border-color:var(--bluL)}
+    .s-hint{font-size:10px;color:var(--muted);margin-top:10px;line-height:1.6;
+      background:rgba(37,99,235,.06);border-radius:8px;padding:8px 10px}
+    .toggle-row{display:flex;align-items:center;justify-content:space-between;
+      padding:11px 0;border-top:1px solid var(--brd);margin-top:4px}
+    .toggle-lbl{font-size:13px;color:var(--text);font-weight:600}
+    .toggle-sub{font-size:10px;color:var(--muted);margin-top:2px}
+    .sw{position:relative;width:44px;height:24px;flex-shrink:0}
+    .sw input{display:none}
+    .sw-track{position:absolute;inset:0;background:var(--brd);border-radius:99px;
+      cursor:pointer;transition:background .2s}
+    .sw-track::after{content:"";position:absolute;width:18px;height:18px;
+      background:#fff;border-radius:50%;top:3px;left:3px;transition:transform .2s;
+      box-shadow:0 1px 3px rgba(0,0,0,.3)}
+    .sw input:checked+.sw-track{background:var(--bluL)}
+    .sw input:checked+.sw-track::after{transform:translateX(20px)}
+
+    /* Bouton-lien vers codes panel */
+    .s-nav-btn{display:flex;align-items:center;justify-content:space-between;
+      background:var(--surf2);border:1px solid var(--brd);border-radius:8px;
+      padding:11px 14px;cursor:pointer;transition:border-color .2s;width:100%;text-align:left}
+    .s-nav-btn:active{border-color:var(--bluL)}
+    .s-nav-label{font-size:13px;color:var(--text);font-weight:600}
+    .s-nav-sub{font-size:10px;color:var(--muted);margin-top:2px}
+    .s-nav-arrow{color:var(--muted);font-size:16px}
+
+    /* CODES PANEL (Ignorer + Renommer) */
+    .codes-add-row{display:flex;gap:8px;margin-bottom:14px}
+    .codes-add-row .s-input{margin:0}
+    .code-item{display:flex;align-items:center;gap:10px;
+      background:var(--surf2);border:1px solid var(--brd);border-radius:10px;
+      padding:8px 12px;margin-bottom:6px;transition: transform 0.2s, opacity 0.2s;}
+    .code-item.excl-item{opacity:.65}
+    .code-badge{font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;
+      background:rgba(37,99,235,.15);color:var(--bluL);flex-shrink:0;min-width:44px;text-align:center}
+    .code-item.excl-item .code-badge{background:var(--brd);color:var(--muted);text-decoration:line-through}
+    .code-label{flex:1;font-size:12px;color:var(--text)}
+    
+    /* Drag and Drop Mobile */
+    .drag-handle{padding:6px;margin-left:-6px;cursor:grab;color:var(--muted);font-size:18px;line-height:1;touch-action:none}
+    .code-item.dragging { opacity:0.8; background:var(--surf); border-color:var(--bluL); z-index: 100; transform: scale(1.02); }
+    
+    .code-del{background:transparent;border:none;color:var(--err);
+      font-size:16px;cursor:pointer;padding:2px 4px;flex-shrink:0}
+    .code-cb{width:18px;height:18px;cursor:pointer;accent-color:var(--err);flex-shrink:0}
+    .codes-legend{display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+    .leg-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted)}
+    .leg-dot{width:10px;height:10px;border-radius:3px}
+
+    /* Input pour renommer */
+    .rename-input{flex:1; background:var(--surf); border:1px solid var(--brd); color:var(--text); padding:8px 10px; border-radius:6px; font-size:12px; outline:none; transition:border-color .2s}
+    .rename-input:focus{border-color:var(--bluL)}
+
+    /* TOAST */
+    .toast{position:fixed;top:16px;left:16px;right:16px;
+      background:#1a2740;border-radius:11px;padding:11px 14px;
+      font-size:12px;border-left:3px solid var(--ok);color:var(--text);
+      z-index:9999;display:none;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+    .hidden{display:none!important}
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="hdr">
+    <div class="brand">
+      <div class="brand-ico">&#128197;</div>
+      <div>
+        <div class="brand-name">TCS&#8594;ICS</div>
+        <div class="brand-sub">eqso.be &middot; planning</div>
+      </div>
+    </div>
+    <div class="hdr-right">
+      <div class="month-pill">
+        <div class="mo" id="moLbl">&#8212;</div>
+        <div class="yr" id="yrLbl">&#8212;</div>
+      </div>
+      <button class="settings-btn" id="settingsBtn">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 005 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="itab active" id="itab-site" onclick="switchTab('site')">&#127760; Depuis RHTime</div>
+    <div class="itab"        id="itab-file" onclick="switchTab('file')">&#128194; Fichier local</div>
+  </div>
+
+  <div class="scroll">
+    <div class="card active" id="card1" style="margin-top:14px">
+      <div class="c-hdr"><div class="step-n">1</div><div class="c-title">Importer le planning</div></div>
+      <div id="pane-site">
+        <p class="c-desc">Connectez-vous sur RHTime, naviguez vers votre planning, puis faites <strong>clic long &#8594; Exporter en XML</strong>. L'import se fait automatiquement.</p>
+        <button class="btn btn-blue" onclick="openTCS()">&#127760; Importer depuis RHTime</button>
+      </div>
+      <div id="pane-file" class="hidden">
+        <p class="c-desc">S&#233;lectionnez un fichier XML RHTime d&#233;j&#224; pr&#233;sent sur votre appareil.</p>
+        <div class="drop" id="dropZone" onclick="pickFile('file')">
+          <div class="drop-ico">&#128194;</div>
+          <div class="drop-txt">Appuyez pour choisir</div>
+          <div class="drop-hint">fichier export.xml</div>
+        </div>
+        <input type="file" id="fi-file" accept=".xml,text/xml,application/xml" style="display:none">
+      </div>
+    </div>
+
+    <div class="card hidden" id="card2">
+      <div class="c-hdr"><div class="step-n">2</div><div class="c-title">Aper&#231;u du planning</div></div>
+      <div class="ev-box">
+        <div class="ev-count" id="evCount">0</div>
+        <div class="ev-lbl">JOURS TRAVAILL&#201;S EXPORT&#201;S</div>
+        <div class="ev-month" id="evMonth">&#8212;</div>
+        <div class="ev-sub" id="evSub"></div>
+      </div>
+
+      <div class="view-toggle">
+        <div class="vt-btn active" id="vt-list" onclick="setView('list')">&#9776; Liste</div>
+        <div class="vt-btn"        id="vt-cal"  onclick="setView('cal')">&#128197; Calendrier</div>
+      </div>
+
+      <div class="ev-list-wrap" id="evListWrap">
+        <div class="ev-list" id="evList"></div>
+      </div>
+
+      <div class="cal-grid" id="calGrid">
+        <div class="cal-dow" id="calDow"></div>
+        <div class="cal-days" id="calDays"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bot">
+    <button class="btn btn-ghost" onclick="reset()" style="width:auto;padding:13px 14px">&#8634;</button>
+    <button class="btn btn-ok" id="btnCal" disabled style="flex:1" onclick="exportICS(true)">
+      &#128197; Ouvrir l'ICS
+    </button>
+    <button class="btn btn-ghost" id="btnShare" disabled style="width:auto;padding:13px 14px" onclick="exportICS(false)">
+      &#8593;
+    </button>
+  </div>
+</div>
+
+<div class="s-panel" id="sPanel">
+  <div class="s-hdr">
+    <button class="btn-x" onclick="closeSettings()">&#10005;</button>
+    <div class="s-hdr-title">Param&#232;tres</div>
+  </div>
+  <div class="s-scroll">
+
+    <div class="s-section">Connexion automatique RHTime</div>
+    <div class="s-card">
+      <div class="s-field">
+        <label class="s-label">Identifiant</label>
+        <input class="s-input" type="text" id="credUser" placeholder="ex: jdupont"
+          autocomplete="username" autocorrect="off" autocapitalize="none" spellcheck="false">
+      </div>
+      <div class="s-field">
+        <label class="s-label">Mot de passe</label>
+        <input class="s-input" type="password" id="credPass" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;"
+          autocomplete="current-password">
+      </div>
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-lbl">Connexion automatique</div>
+          <div class="toggle-sub">Remplir et soumettre le formulaire</div>
+        </div>
+        <label class="sw"><input type="checkbox" id="autoLoginToggle"><div class="sw-track"></div></label>
+      </div>
+      <div class="s-hint">&#128274; Identifiants stock&#233;s uniquement sur cet appareil.</div>
+    </div>
+    <button class="btn btn-blue" onclick="saveCredentials()" style="margin-bottom:8px">&#128190; Sauvegarder</button>
+    <button class="btn btn-danger" style="margin-bottom:20px" onclick="clearCredentials()">&#128465; Effacer les identifiants</button>
+
+    <div class="s-section">Codes horaires</div>
+    <button class="s-nav-btn" onclick="openRenamePanel()" style="margin-bottom:8px">
+      <div>
+        <div class="s-nav-label">&#9999;&#65039; Renommer les codes</div>
+        <div class="s-nav-sub">Modifier le nom export&#233; dans l'agenda</div>
+      </div>
+      <div class="s-nav-arrow">&#8250;</div>
+    </button>
+    
+    <button class="s-nav-btn" onclick="openCodesPanel()" style="margin-bottom:20px">
+      <div>
+        <div class="s-nav-label">&#128683; Codes &#224; ignorer</div>
+        <div class="s-nav-sub" id="codesNavSub">G&#233;rer les codes non export&#233;s</div>
+      </div>
+      <div class="s-nav-arrow">&#8250;</div>
+    </button>
+	
+	<button class="s-nav-btn" onclick="openDeletePanel()" style="margin-bottom:20px">
+  <div>
+    <div class="s-nav-label">🗑️ Supprimer des codes</div>
+    <div class="s-nav-sub">Nettoyer la liste des codes enregistrés</div>
+  </div>
+  <div class="s-nav-arrow">›</div>
+</button>
+
+    <div class="s-section">Comportement</div>
+    <div class="s-card">
+      <div class="toggle-row" style="border-top:none;padding-top:0;margin-top:0">
+        <div>
+          <div class="toggle-lbl">Confirmer avant de quitter</div>
+          <div class="toggle-sub">Appuyer 2x sur Retour pour fermer l'app</div>
+        </div>
+        <label class="sw"><input type="checkbox" id="confirmExitToggle"><div class="sw-track"></div></label>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="codes-panel" id="renamePanel">
+  <div class="s-hdr">
+    <button class="btn-x" onclick="closeRenamePanel()">&#8592;</button>
+    <div class="s-hdr-title">&#9999;&#65039; Renommer les codes</div>
+  </div>
+  <div class="s-scroll">
+    <p style="font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:14px">
+      Personnalisez le nom sous lequel les journ&#233;es appara&#238;tront dans votre agenda.<br>
+      <strong style="color:var(--text)">Maintenez &#9776; pour faire glisser et r&#233;organiser l'ordre.</strong>
+    </p>
+	<div class="codes-add-row">
+  <input class="s-input" type="text" id="newRenameCodeInput"
+    placeholder="Ajouter un code…"
+    autocorrect="off" autocapitalize="characters"
+    style="text-transform:uppercase">
+    
+  <button class="btn btn-blue btn-sm"
+    onclick="addRenameCodeManual()"
+    style="flex-shrink:0;padding:0 16px">+</button>
+</div>
+    <div id="renameList"></div>
+    <p id="renameEmpty" style="font-size:12px;color:var(--muted);text-align:center;padding:20px 0;display:none;">
+      Aucun code connu. Importez un planning.
+    </p>
+  </div>
+</div>
+
+<div class="codes-panel" id="codesPanel">
+  <div class="s-hdr">
+    <button class="btn-x" onclick="closeCodesPanel()">&#8592;</button>
+    <div class="s-hdr-title">&#128683; Codes &#224; ignorer</div>
+  </div>
+  <div class="s-scroll">
+    <p style="font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:14px">
+      Cochez les codes qui ne doivent <strong style="color:var(--text)">pas</strong> &#234;tre export&#233;s (cong&#233;s, r&#233;cups...).<br>
+      <strong style="color:var(--text)">Maintenez &#9776; pour faire glisser et r&#233;organiser l'ordre.</strong>
+    </p>
+
+    <div class="codes-legend">
+      <div class="leg-item"><div class="leg-dot" style="background:rgba(37,99,235,.3)"></div> Export&#233;</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--brd)"></div> Ignor&#233;</div>
+    </div>
+
+    <div class="codes-add-row">
+      <input class="s-input" type="text" id="newCodeInput" placeholder="Ajouter un code&#8230;"
+        autocorrect="off" autocapitalize="characters" style="text-transform:uppercase">
+      <button class="btn btn-blue btn-sm" onclick="addCodeManual()" style="flex-shrink:0;padding:0 16px">+</button>
+    </div>
+
+    <div id="codesList" style="position:relative;"></div>
+    <p id="codesEmpty" style="font-size:12px;color:var(--muted);text-align:center;padding:20px 0">
+      Aucun code rencontr&#233; pour l'instant.<br>Importez un planning pour voir les codes.
+    </p>
+  </div>
+</div>
+
+<div class="codes-panel" id="deletePanel">
+<div class="s-hdr">
+    <button class="btn-x" onclick="closeDeletePanel()">✕</button>
+    <div class="s-hdr-title">🗑️ Supprimer des codes</div>
+  </div>
+  <div class="s-scroll">
+    <p style="font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:14px">
+      Supprimez les codes que vous ne voulez plus voir apparaître dans les listes.<br>
+      <strong style="color:var(--err)">Cette action est irréversible.</strong>
+    </p>
+
+    <button class="btn btn-danger" id="btnDeleteAll" onclick="deleteAllCodes()" style="margin-bottom:20px">
+      ⚠️ Tout supprimer
+    </button>
+
+    <div id="deleteList"></div>
+    <p id="deleteEmpty" style="font-size:12px;color:var(--muted);text-align:center;padding:20px 0;display:none;">
+      Aucun code enregistré.
+    </p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var MOIS=["Janvier","F\u00e9vrier","Mars","Avril","Mai","Juin","Juillet","Ao\u00fbt","Septembre","Octobre","Novembre","D\u00e9cembre"];
+var DOW=["L","M","M","J","V","S","D"];
+var events=[];
+
+function g(id){return document.getElementById(id);}
+function pad(n){return String(n).padStart(2,"0");}
+function normTime(t){
+  if(!t)return null;
+  var m=t.match(/^(\d{1,2})h(\d{2})$/i);
+  if(m)return m[1].padStart(2,"0")+":"+m[2];
+  if(/^\d{2}:\d{2}$/.test(t))return t;
+  return null;
+}
+function toast(msg,type,ms){
+  if(!type)type="ok";if(!ms)ms=3000;
+  var c={ok:"#10b981",err:"#ef4444",warn:"#f59e0b",info:"#3b82f6"};
+  var el=g("toast");
+  el.style.borderLeftColor=c[type]||c.ok;
+  el.textContent=msg;el.style.display="block";
+  clearTimeout(el._t);el._t=setTimeout(function(){el.style.display="none";},ms);
+}
+
+// ── CODES MANAGEMENT ─────────────────────────────────────────────
+function loadCodes(){
+  var s=localStorage.getItem("tcs_codes");
+  return s?JSON.parse(s):[];
+}
+function saveCodes(codes){
+  localStorage.setItem("tcs_codes",JSON.stringify(codes));
+  updateCodesNavSub();
+}
+function isExcluded(code){
+  var codes=loadCodes();
+  for(var i=0;i<codes.length;i++){if(codes[i].code===code&&codes[i].excluded)return true;}
+  return false;
+}
+
+// Appelé après le parsing du XML (Fichier local ET bridge Android)
+function registerCodes(evs){
+  var codes=loadCodes();
+  var existing=codes.map(function(c){return c.code;});
+  var changed=false;
+  evs.forEach(function(ev){
+    if(ev.code&&existing.indexOf(ev.code)===-1){
+      // Nouveau code détecté
+      codes.push({code:ev.code, excluded:false, name:""});
+      existing.push(ev.code);
+      changed=true;
+    }
+  });
+  if(changed) saveCodes(codes);
+}
+
+function updateCodesNavSub(){
+  var codes=loadCodes();
+  var excl=codes.filter(function(c){return c.excluded;}).length;
+  var sub=codes.length+" code(s) connu(s)";
+  if(excl>0)sub+=", "+excl+" ignor\u00e9(s)";
+  g("codesNavSub").textContent=sub;
+}
+
+// ── GLISSER-DEPOSER (TOUCH DRAG & DROP) ──────────────────────────
+function initDrag(listId) {
+  var list = g(listId);
+  if(!list) return;
+  var dragSrc = null;
+
+  list.addEventListener('touchstart', function(e) {
+    var handle = e.target.closest('.drag-handle');
+    if (!handle) return;
+    var item = handle.closest('.code-item');
+    dragSrc = item;
+    item.classList.add('dragging');
+  }, {passive: false});
+
+  list.addEventListener('touchmove', function(e) {
+    if (!dragSrc) return;
+    e.preventDefault(); // Empêche le scroll pendant le glissement
+    var touch = e.touches[0];
+    var target = document.elementFromPoint(touch.clientX, touch.clientY);
+    var targetItem = target ? target.closest('.code-item') : null;
+    
+    if (targetItem && targetItem !== dragSrc && targetItem.parentNode === list) {
+      var rect = targetItem.getBoundingClientRect();
+      var mid = rect.top + rect.height / 2;
+      if (touch.clientY < mid) {
+        list.insertBefore(dragSrc, targetItem);
+      } else {
+        list.insertBefore(dragSrc, targetItem.nextSibling);
+      }
+    }
+  }, {passive: false});
+
+  list.addEventListener('touchend', function(e) {
+    if (!dragSrc) return;
+    dragSrc.classList.remove('dragging');
+    dragSrc = null;
+    updateOrder(listId);
+  });
+}
+
+function updateOrder(listId) {
+  var list = g(listId);
+  var newCodes = [];
+  var oldCodes = loadCodes();
+  var items = list.querySelectorAll('.code-item');
+  
+  items.forEach(function(item) {
+    var codeStr = item.getAttribute('data-code');
+    var found = oldCodes.find(function(c) { return c.code === codeStr; });
+    if (found) newCodes.push(found);
+  });
+  saveCodes(newCodes);
+  
+  // Re-render pour s'assurer que les index internes correspondent visuellement
+  if(listId === 'codesList') renderCodesList();
+  if(listId === 'renameList') renderRenameList();
+}
+
+// ── PANNEAU RENOMMER ─────────────────────────────────────────────
+function openRenamePanel(){
+  renderRenameList();
+  g("renamePanel").classList.add("open");
+}
+function closeRenamePanel(){
+  g("renamePanel").classList.remove("open");
+}
+function renderRenameList(){
+  var codes = loadCodes();
+  var list = g("renameList");
+  var empty = g("renameEmpty");
+  
+  if(codes.length === 0){
+    list.innerHTML = "";
+    empty.style.display = "block";
+    return;
+  }
+  
+  empty.style.display = "none";
+  list.innerHTML = codes.map(function(c){
+    var defaultName = "Travail - " + c.code;
+    var opacityStyle = c.excluded ? 'style="opacity:0.6"' : '';
+
+    return '<div class="code-item" data-code="'+c.code+'" '+opacityStyle+'>'
+      // Ajout de la poignée de déplacement
+      +'<div class="drag-handle">☰</div>'
+      +'<span class="code-badge">'+c.code+'</span>'
+      +'<input type="text" class="rename-input" value="'+(c.name||"")+'" '
+      +'placeholder="'+defaultName+'" '
+      +'onchange="renameCode(\''+c.code+'\', this.value)" '
+      +'style="flex:1; margin-left:10px;' + (c.excluded ? 'text-decoration:line-through;' : '') + '">'
+      +'</div>';
+  }).join("");
+}
+
+function renameCode(codeStr, newName) {
+  var codes = loadCodes();
+  var found = false;
+
+  for (var i = 0; i < codes.length; i++) {
+    if (codes[i].code === codeStr) {
+      codes[i].name = newName.trim();
+      found = true;
+      break;
+    }
+  }
+
+  if (found) {
+    saveCodes(codes);
+    updateCodesNavSub(); // Met à jour le petit texte dans les réglages
+    toast("✅ Nom mis à jour", "ok", 1000);
+    
+    // On ne rappelle PAS renderRenameList() ici volontairement.
+    // Si on le faisait, l'input perdrait le focus (clavier qui se ferme) 
+    // à chaque modification.
+  }
+}
+
+function updateCodeName(codeStr, val){
+  var codes=loadCodes();
+  var c = codes.find(function(x){return x.code === codeStr;});
+  if(c) {
+    c.name = val.trim();
+    saveCodes(codes);
+  }
+}
+
+// ── PANNEAU IGNORER ──────────────────────────────────────────────
+function openCodesPanel(){
+  renderCodesList();
+  g("codesPanel").classList.add("open");
+}
+function closeCodesPanel(){
+  g("codesPanel").classList.remove("open");
+  if(events.length)showPreview(events); // refresh preview
+}
+function renderCodesList(){
+  var codes = loadCodes();
+  var list = g("codesList");
+  var empty = g("codesEmpty");
+  
+  if(codes.length === 0){
+    list.innerHTML = "";
+    empty.style.display = "block";
+    return;
+  }
+  
+  empty.style.display = "none";
+  list.innerHTML = codes.map(function(c){
+    var defaultName = "Travail - " + c.code;
+    var currentName = c.name || defaultName;
+    var labelStyle = c.excluded ? 'style="text-decoration:line-through; color:var(--muted)"' : '';
+
+    return '<div class="code-item'+(c.excluded?" excl-item":"")+'" data-code="'+c.code+'">'
+      +'<div class="drag-handle">☰</div>'
+      +'<span class="code-badge">'+c.code+'</span>'
+      +'<span class="code-label" '+labelStyle+'>'+currentName+'</span>'
+      // On garde la checkbox mais on retire le bouton de suppression 🗑️
+      +'<input type="checkbox" class="code-cb" style="margin-left:auto" title="Ignorer ce code"'+(c.excluded?" checked":"")+' onchange="toggleExcluded(\''+c.code+'\',this.checked)">'
+      +'</div>';
+  }).join("");
+}
+function toggleExcluded(codeStr, val){
+  var codes=loadCodes();
+  var c = codes.find(function(x){return x.code===codeStr;});
+  if(c) c.excluded = val;
+  saveCodes(codes);
+  renderCodesList();
+}
+function removeCode(codeStr){
+  var codes=loadCodes();
+  codes = codes.filter(function(x){return x.code!==codeStr;});
+  saveCodes(codes);
+  renderCodesList();
+  if(g("renamePanel").classList.contains("open")) renderRenameList();
+}
+function addCodeManual(){
+  var input=g("newCodeInput");
+  var code=input.value.trim().toUpperCase();
+  if(!code){toast("Entrez un code","warn");return;}
+  var codes=loadCodes();
+  if(codes.find(function(c){return c.code===code;})){
+    toast("Code d\u00e9j\u00e0 pr\u00e9sent","warn");return;
+  }
+  codes.push({code:code,excluded:false, name:""});
+  saveCodes(codes);
+  input.value="";
+  renderCodesList();
+  toast("\u2705 Code '"+code+"' ajout\u00e9");
+}
+
+// ── PANNEAU SUPPRESSION ──────────────────────────────────────────
+var deleteConfirmStage = 0;
+
+function openDeletePanel(){
+  renderDeleteList();
+  deleteConfirmStage = 0;
+  g("btnDeleteAll").textContent = "⚠️ Tout supprimer";
+  g("deletePanel").classList.add("open");
+}
+
+function closeDeletePanel(){
+  g("deletePanel").classList.remove("open");
+}
+
+function renderDeleteList(){
+  var codes = loadCodes();
+  var list = g("deleteList");
+  var empty = g("deleteEmpty");
+  
+  if(codes.length === 0){
+    list.innerHTML = "";
+    empty.style.display = "block";
+    return;
+  }
+  
+  empty.style.display = "none";
+  list.innerHTML = codes.map(function(c){
+    var defaultName = "Travail - " + c.code;
+    var currentName = c.name || defaultName;
+    
+    // AJOUT : On définit le style barré si le code est marqué comme exclu
+    var labelStyle = c.excluded ? 'style="text-decoration:line-through; color:var(--muted)"' : '';
+
+    return '<div class="code-item" data-code="'+c.code+'">'
+      +'<span class="code-badge">'+c.code+'</span>'
+      // AJOUT : On applique la variable labelStyle ici
+      +'<span class="code-label" '+labelStyle+' style="margin-left:8px">' + currentName + '</span>'
+      +'<button class="code-del" onclick="removeCodeFromDelete(\''+c.code+'\')" style="font-size:20px; margin-left:auto">×</button>'
+      +'</div>';
+  }).join("");
+}
+
+// Suppression individuelle avec rafraîchissement de la liste locale
+function removeCodeFromDelete(codeStr){
+  removeCode(codeStr); // Utilise votre fonction existante
+  renderDeleteList();  // Rafraîchit l'affichage spécifique
+}
+
+// Suppression totale avec double confirmation
+function deleteAllCodes(){
+  var btn = g("btnDeleteAll");
+  if(deleteConfirmStage === 0){
+    deleteConfirmStage = 1;
+    btn.textContent = "CONFIRMER LA SUPPRESSION ?";
+    btn.style.background = "var(--warn)"; // Orange pour prévenir
+    btn.style.color = "#000"; // Texte noir pour le contraste
+    
+    setTimeout(function(){
+      if(deleteConfirmStage === 1){
+        deleteConfirmStage = 0;
+        btn.textContent = "⚠️ Tout supprimer";
+        btn.style.background = "";
+        btn.style.color = "";
+      }
+    }, 3000);
+  } else {
+    localStorage.removeItem("tcs_codes");
+    deleteConfirmStage = 0;
+    btn.textContent = "⚠️ Tout supprimer";
+    btn.style.background = "";
+    btn.style.color = "";
+    updateCodesNavSub();
+    renderDeleteList();
+    toast("🗑️ Tous les codes ont été supprimés", "info");
+  }
+}
+// Fonction générique pour valider un input sur Enter
+function handleEnter(event, callback) {
+  if (event.key === "Enter") {
+    event.preventDefault(); // empêche le comportement par défaut (soumission de formulaire)
+    callback();             // appelle la fonction de validation
+  }
+}
+
+// Exemple d'utilisation pour ajouter un code manuel
+const newRenameInput = document.getElementById('newRenameCodeInput');
+newRenameInput.addEventListener('keydown', (e) => handleEnter(e, addRenameCodeManual));
+
+const newCodeInput = document.getElementById('newCodeInput');
+newCodeInput.addEventListener('keydown', (e) => handleEnter(e, addCodeManual));
+
+// ── SETTINGS ─────────────────────────────────────────────────────
+g("settingsBtn").addEventListener("click",function(){
+  g("credUser").value=localStorage.getItem("tcs_user")||"";
+  g("credPass").value=localStorage.getItem("tcs_pass")||"";
+  g("autoLoginToggle").checked=localStorage.getItem("tcs_auto")==="1";
+  g("confirmExitToggle").checked=localStorage.getItem("tcs_confirm_exit")==="1";
+  updateCodesNavSub();
+  g("sPanel").classList.add("open");
+});
+function addRenameCodeManual(){
+  var input = g("newRenameCodeInput");
+  var code = input.value.trim().toUpperCase();
+
+  if(!code){
+    toast("Entrez un code","warn");
+    return;
+  }
+
+  var codes = loadCodes();
+
+  if(codes.find(function(c){ return c.code === code; })){
+    toast("Code déjà présent","warn");
+    return;
+  }
+
+  codes.push({
+    code: code,
+    excluded: false,
+    name: ""
+  });
+
+  saveCodes(codes);
+  input.value = "";
+
+  renderRenameList(); // refresh direct
+  toast("✅ Code '"+code+"' ajouté");
+}
+function closeSettings(){g("sPanel").classList.remove("open");}
+function saveCredentials(){
+  localStorage.setItem("tcs_user",g("credUser").value.trim());
+  localStorage.setItem("tcs_pass",g("credPass").value);
+  localStorage.setItem("tcs_auto",g("autoLoginToggle").checked?"1":"0");
+  var ce=g("confirmExitToggle").checked;
+  localStorage.setItem("tcs_confirm_exit",ce?"1":"0");
+  if(window.Android&&window.Android.setConfirmExit)window.Android.setConfirmExit(ce);
+  closeSettings();
+  toast("\u2705 Param\u00e8tres sauvegard\u00e9s","ok");
+}
+g("newRenameCodeInput").addEventListener("keypress", function(e){
+  if(e.key === "Enter"){
+    addRenameCodeManual();
+  }
+});
+function clearCredentials(){
+  localStorage.removeItem("tcs_user");localStorage.removeItem("tcs_pass");localStorage.removeItem("tcs_auto");
+  g("credUser").value="";g("credPass").value="";g("autoLoginToggle").checked=false;
+  toast("\ud83d\uddd1\ufe0f Identifiants effac\u00e9s","ok");
+}
+g("confirmExitToggle").addEventListener("change",function(){
+  localStorage.setItem("tcs_confirm_exit",this.checked?"1":"0");
+  if(window.Android&&window.Android.setConfirmExit)window.Android.setConfirmExit(this.checked);
+});
+
+// ── TABS & NAV ───────────────────────────────────────────────────
+function switchTab(mode){
+  var s=mode==="site";
+  g("itab-site").classList.toggle("active",s);
+  g("itab-file").classList.toggle("active",!s);
+  g("pane-site").classList.toggle("hidden",!s);
+  g("pane-file").classList.toggle("hidden",s);
+}
+function openTCS(){
+  var user=localStorage.getItem("tcs_user")||"";
+  var pass=localStorage.getItem("tcs_pass")||"";
+  var auto=localStorage.getItem("tcs_auto")==="1";
+  if(window.Android){
+    if(auto&&user&&pass&&window.Android.setAutoLoginCredentials)
+      window.Android.setAutoLoginCredentials(user,pass);
+    window.Android.loadTCSPage();
+  }
+}
+function pickFile(src){var input=g("fi-file");input.value="";input.click();}
+g("fi-file").onchange=function(){handleFile(g("fi-file").files[0]);};
+
+// ── PARSE XML ─────────────────────────────────────────────────────
+function parseXML(xml){
+  var doc=new DOMParser().parseFromString(xml,"application/xml");
+  if(doc.querySelector("parsererror"))throw new Error("Fichier XML invalide");
+  var evs=[];
+  doc.querySelectorAll("Table_ListeHoraire").forEach(function(row,i){
+    function gt(tag){var el=row.querySelector(tag);return el?el.textContent.trim():"";}
+    var dateRaw=gt("Date"),code=gt("Code");
+    if(!dateRaw||!code)return;
+    var m=dateRaw.match(/(\d{2}\/\d{2}\/\d{4})/);
+    if(!m)return;
+    evs.push({date:m[1],code:code,structure:gt("Structure"),
+      debut:gt("D\u00e9but"),fin:gt("Fin"),memo:gt("M\u00e9mo"),sousCode:gt("Sous-Code"),idx:i});
+  });
+  return evs;
+}
+
+// ── HANDLE FILE ───────────────────────────────────────────────────
+function handleFile(file){
+  if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var evs=parseXML(e.target.result);
+      if(!evs.length){toast("\u26a0\ufe0f Aucun \u00e9v\u00e9nement trouv\u00e9","warn");return;}
+      events=evs;
+      registerCodes(evs); // Apprentissage fichier local
+      showPreview(evs);
+      toast("\u2705 "+evs.length+" \u00e9v\u00e9nements charg\u00e9s");
+      if(window.Android&&window.Android.onXmlLoaded)window.Android.onXmlLoaded(evs.length);
+    }catch(err){toast("\u274c "+err.message,"err");}
+  };
+  reader.readAsText(file,"UTF-8");
+}
+
+// ── VIEW TOGGLE & PREVIEW ─────────────────────────────────────────
+var currentView="list";
+function setView(v){
+  currentView=v;
+  g("vt-list").classList.toggle("active",v==="list");
+  g("vt-cal").classList.toggle("active",v==="cal");
+  g("evListWrap").classList.toggle("hidden",v!=="list");
+  g("calGrid").classList.toggle("active",v==="cal");
+}
+
+function showPreview(evs){
+  var parts=evs[0].date.split("/");
+  var moName=MOIS[parseInt(parts[1])-1];
+  g("moLbl").textContent=moName;g("yrLbl").textContent=parts[2];
+  g("evMonth").textContent=moName+" "+parts[2];
+
+  var totalExported=evs.filter(function(ev){return !isExcluded(ev.code);}).length;
+  var totalIgnored=evs.length-totalExported;
+  g("evCount").textContent=totalExported;
+  g("evSub").textContent=totalIgnored>0?totalIgnored+" jour(s) ignor\u00e9(s) non export\u00e9(s)":"";
+
+  g("evList").innerHTML=evs.map(function(ev){
+    var p=ev.date.split("/");
+    var d=normTime(ev.debut)||"\u2014",f=normTime(ev.fin)||"\u2014";
+    var excl=isExcluded(ev.code);
+    var badge=excl?'<span class="ev-ign-badge">ignor\u00e9</span>':'';
+    return "<div class='ev-item"+(excl?" excluded":"")+"'>"
+      +"<span class='ev-date'>"+p[0]+"/"+p[1]+"</span>"
+      +"<span class='ev-code'>"+ev.code+"</span>"
+      +"<span class='ev-time'>"+d+"\u2192"+f+"</span>"
+      +(ev.structure?"<span class='ev-loc'>"+ev.structure+"</span>":"")
+      +badge+"</div>";
+  }).join("");
+
+  renderCalendar(evs, parseInt(parts[1])-1, parseInt(parts[2]));
+
+  g("card1").className="card done";
+  g("card2").className="card active";
+  g("btnCal").disabled=false;g("btnShare").disabled=false;
+  g("card2").scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+function renderCalendar(evs, month, year){
+  var dowEl=g("calDow");
+  dowEl.innerHTML=DOW.map(function(d){return "<div class='cal-dow-cell'>"+d+"</div>";}).join("");
+
+  var byDay={};
+  evs.forEach(function(ev){
+    var d=ev.date.split("/")[0];
+    var key=parseInt(d);
+    if(!byDay[key])byDay[key]=[];
+    byDay[key].push(ev);
+  });
+
+  var firstDow=(new Date(year,month,1).getDay()+6)%7;
+  var daysInMonth=new Date(year,month+1,0).getDate();
+  var today=new Date();
+
+  var daysEl=g("calDays");
+  var html="";
+  for(var i=0;i<firstDow;i++)html+="<div class='cal-day empty'></div>";
+
+  for(var d=1;d<=daysInMonth;d++){
+    var dayEvs=byDay[d]||[];
+    var isToday=(today.getDate()===d&&today.getMonth()===month&&today.getFullYear()===year);
+    var allExcl=dayEvs.length>0&&dayEvs.every(function(e){return isExcluded(e.code);});
+    var hasExp=dayEvs.some(function(e){return !isExcluded(e.code);});
+
+    var cls="cal-day";
+    if(isToday)cls+=" today";
+    if(allExcl)cls+=" all-excluded";
+    else if(hasExp||dayEvs.length)cls+=" has-event";
+
+    html+="<div class='"+cls+"'><div class='cal-day-num'>"+d+"</div>";
+    dayEvs.forEach(function(ev){
+      var excl=isExcluded(ev.code);
+      var t=normTime(ev.debut)||"";
+      html+="<div class='cal-code"+(excl?" excl":"")+"'>"+ev.code+"</div>";
+      if(t&&!excl)html+="<div class='cal-time'>"+t+"</div>";
+    });
+    html+="</div>";
+  }
+  daysEl.innerHTML=html;
+}
+
+// ── BUILD ICS ─────────────────────────────────────────────────────
+function buildICS(evs){
+  var now=new Date();
+  var ds=now.getUTCFullYear()+pad(now.getUTCMonth()+1)+pad(now.getUTCDate())
+    +"T"+pad(now.getUTCHours())+pad(now.getUTCMinutes())+pad(now.getUTCSeconds())+"Z";
+  function esc(s){return(s||"").replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\n/g,"\\n");}
+  function dt(d,t){var p=d.split("/");var n=normTime(t)||"00:00";var h=n.split(":");
+    return p[2]+pad(p[1])+pad(p[0])+"T"+pad(h[0])+pad(h[1])+"00";}
+  function fold(l){if(l.length<=75)return l;
+    var r="",p=0;while(p<l.length){r+=(p===0?"":"\r\n ")+l.substring(p,p+(p===0?75:74));p+=(p===0?75:74);}return r;}
+  var lines=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//TCS ICS APK//FR",
+    "CALSCALE:GREGORIAN","METHOD:PUBLISH","X-WR-CALNAME:Horaire TCS","X-WR-TIMEZONE:Europe/Brussels",
+    "BEGIN:VTIMEZONE","TZID:Europe/Brussels",
+    "BEGIN:STANDARD","DTSTART:19701025T030000","RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=10",
+    "TZOFFSETFROM:+0200","TZOFFSETTO:+0100","TZNAME:CET","END:STANDARD",
+    "BEGIN:DAYLIGHT","DTSTART:19700329T020000","RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=3",
+    "TZOFFSETFROM:+0100","TZOFFSETTO:+0200","TZNAME:CEST","END:DAYLIGHT","END:VTIMEZONE"];
+  
+  var codesConfig = loadCodes();
+
+  evs.forEach(function(ev,i){
+    if(isExcluded(ev.code))return;
+    
+    // Récupérer le nom personnalisé s'il existe
+    var cnf = codesConfig.find(function(x){return x.code===ev.code;});
+    var evName = (cnf && cnf.name) ? cnf.name : ("Travail - " + ev.code);
+
+    var p=ev.date.split("/");
+    var deb=normTime(ev.debut),fin=normTime(ev.fin);
+    var notes=[ev.memo,ev.sousCode].filter(Boolean).join("\\n");
+    
+    lines.push("BEGIN:VEVENT",
+      "UID:tcs-"+ev.date.replace(/\//g,"-")+"-"+ev.code+"-"+i+"@eqso.be",
+      "DTSTAMP:"+ds,
+      deb&&fin?"DTSTART;TZID=Europe/Brussels:"+dt(ev.date,ev.debut):"DTSTART;VALUE=DATE:"+p[2]+pad(p[1])+pad(p[0]),
+      deb&&fin?"DTEND;TZID=Europe/Brussels:"+dt(ev.date,ev.fin):"DTEND;VALUE=DATE:"+p[2]+pad(p[1])+pad(p[0]),
+      "SUMMARY:"+esc(evName));
+    if(ev.structure)lines.push("LOCATION:"+esc(ev.structure));
+    if(notes)lines.push("DESCRIPTION:"+notes);
+    lines.push("END:VEVENT");
+  });
+  lines.push("END:VCALENDAR");
+  return lines.map(fold).join("\r\n")+"\r\n";
+}
+
+// ── EXPORT ICS ────────────────────────────────────────────────────
+function exportICS(openCal){
+  if(!events.length)return;
+  var ics=buildICS(events);
+  var parts=events[0].date.split("/");
+  var fname="horaire-tcs-"+parts[2]+"-"+parts[1]+".ics";
+  if(window.Android&&window.Android.saveAndOpenICS){
+    window.Android.saveAndOpenICS(ics,fname,openCal);
+  } else {
+    var blob=new Blob([ics],{type:"text/calendar;charset=utf-8"});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement("a");a.href=url;a.download=fname;
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    setTimeout(function(){URL.revokeObjectURL(url);},5000);
+    toast("\ud83d\udcc5 Fichier .ics t\u00e9l\u00e9charg\u00e9","ok");
+  }
+}
+
+function reset(){
+  events=[];
+  g("card1").className="card active";
+  g("card2").className="card hidden";
+  g("btnCal").disabled=true;g("btnShare").disabled=true;
+  g("moLbl").textContent="\u2014";g("yrLbl").textContent="\u2014";
+  setView("list");
+}
+
+// ── INIT ──────────────────────────────────────────────────────────
+var n=new Date();
+g("moLbl").textContent=MOIS[n.getMonth()];
+g("yrLbl").textContent=n.getFullYear();
+updateCodesNavSub();
+
+// Initialisation du drag and drop pour les deux listes
+initDrag('codesList');
+initDrag('renameList');
+
+var initCE=localStorage.getItem("tcs_confirm_exit")==="1";
+if(window.Android&&window.Android.setConfirmExit)window.Android.setConfirmExit(initCE);
+</script>
+</body>
+</html>
