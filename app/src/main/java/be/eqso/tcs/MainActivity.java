@@ -43,6 +43,7 @@ public class MainActivity extends AppCompatActivity {
     private String  autoLoginPass  = null;
     private boolean confirmExit    = false;
     private long    lastBackPress  = 0;
+    private boolean onTCSPage      = false; // true = WebView affiche le site TCS
 
     // ── File picker manuel ────────────────────────────────────────────────────
     private final ActivityResultLauncher<Intent> filePickerLauncher =
@@ -124,6 +125,7 @@ public class MainActivity extends AppCompatActivity {
 
     // ── Charger index.html puis injecter le XML ───────────────────────────────
     private void loadHomeAndInject(final String safeXml) {
+        onTCSPage = false;        // on quitte le site TCS
         webView.stopLoading();
         webView.clearHistory();
         webView.loadUrl("file:///android_asset/index.html");
@@ -326,8 +328,16 @@ public class MainActivity extends AppCompatActivity {
                     mainHandler.post(() -> webView.evaluateJavascript("closeRenamePanel();", null));
                 } else if ("\"settings\"".equals(result)) {
                     mainHandler.post(() -> webView.evaluateJavascript("closeSettings();", null));
-                } else if (webView.canGoBack()) {
+                } else if (onTCSPage && webView.canGoBack()) {
                     mainHandler.post(() -> webView.goBack());
+                } else if (onTCSPage) {
+                    // Plus d'historique sur TCS → retour à l'accueil
+                    onTCSPage = false;
+                    mainHandler.post(() -> {
+                        webView.stopLoading();
+                        webView.clearHistory();
+                        webView.loadUrl("file:///android_asset/index.html");
+                    });
                 } else if (confirmExit) {
                     long now = System.currentTimeMillis();
                     if (now - lastBackPress < 2000) {
@@ -412,9 +422,8 @@ public class MainActivity extends AppCompatActivity {
 
         @JavascriptInterface
         public void loadTCSPage() {
-            // Charger le site TCS directement dans la WebView
-            // (pas dans une iframe — pour que onPageFinished et l'autologin fonctionnent)
             mainHandler.post(() -> {
+                onTCSPage = true;
                 webView.stopLoading();
                 webView.loadUrl("https://tcs.eqso.be/RHTime");
             });
