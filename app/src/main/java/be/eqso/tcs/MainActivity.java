@@ -311,13 +311,16 @@ public class MainActivity extends AppCompatActivity {
         // Priorité 4 : quitter
         webView.evaluateJavascript(
             "(function(){" +
+            "  if(document.getElementById('deletePanel')&&document.getElementById('deletePanel').classList.contains('open'))return 'delete';" +
             "  if(document.getElementById('codesPanel')&&document.getElementById('codesPanel').classList.contains('open'))return 'codes';" +
             "  if(document.getElementById('renamePanel')&&document.getElementById('renamePanel').classList.contains('open'))return 'rename';" +
             "  if(document.getElementById('sPanel')&&document.getElementById('sPanel').classList.contains('open'))return 'settings';" +
             "  return 'none';" +
             "})()",
             result -> {
-                if ("\"codes\"".equals(result)) {
+                if ("\"delete\"".equals(result)) {
+                    mainHandler.post(() -> webView.evaluateJavascript("closeDeletePanel();", null));
+                } else if ("\"codes\"".equals(result)) {
                     mainHandler.post(() -> webView.evaluateJavascript("closeCodesPanel();", null));
                 } else if ("\"rename\"".equals(result)) {
                     mainHandler.post(() -> webView.evaluateJavascript("closeRenamePanel();", null));
