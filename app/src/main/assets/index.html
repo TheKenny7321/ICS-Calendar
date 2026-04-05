@@ -395,6 +395,16 @@
       Personnalisez le nom sous lequel les journ&#233;es appara&#238;tront dans votre agenda.<br>
       <strong style="color:var(--text)">Maintenez &#9776; pour faire glisser et r&#233;organiser l'ordre.</strong>
     </p>
+	<div class="codes-add-row">
+  <input class="s-input" type="text" id="newRenameCodeInput"
+    placeholder="Ajouter un code…"
+    autocorrect="off" autocapitalize="characters"
+    style="text-transform:uppercase">
+    
+  <button class="btn btn-blue btn-sm"
+    onclick="addRenameCodeManual()"
+    style="flex-shrink:0;padding:0 16px">+</button>
+</div>
     <div id="renameList"></div>
     <p id="renameEmpty" style="font-size:12px;color:var(--muted);text-align:center;padding:20px 0;display:none;">
       Aucun code connu. Importez un planning.
@@ -571,11 +581,12 @@ function renderRenameList(){
   list.innerHTML=codes.map(function(c){
     var defaultName = "Travail - " + c.code;
     var currentName = c.name || defaultName;
-    return '<div class="code-item" data-code="'+c.code+'">'
-      +'<div class="drag-handle" title="Glisser pour réorganiser">&#9776;</div>'
-      +'<span class="code-badge">'+c.code+'</span>'
-      +'<input type="text" class="rename-input" placeholder="'+defaultName+'" value="'+currentName.replace(/"/g, '&quot;')+'" onchange="updateCodeName(\''+c.code+'\',this.value)">'
-      +'</div>';
+	return '<div class="code-item" data-code="'+c.code+'">'
+  +'<div class="drag-handle" title="Glisser pour réorganiser">&#9776;</div>'
+  +'<span class="code-badge">'+c.code+'</span>'
+  +'<input type="text" class="rename-input" placeholder="'+defaultName+'" value="'+currentName.replace(/"/g, '&quot;')+'" onchange="updateCodeName(\''+c.code+'\',this.value)">'
+  +'<button class="code-del" onclick="removeCode(\''+c.code+'\')" title="Supprimer">&#128465;</button>'
+  +'</div>';
   }).join("");
 }
 
@@ -651,6 +662,34 @@ g("settingsBtn").addEventListener("click",function(){
   updateCodesNavSub();
   g("sPanel").classList.add("open");
 });
+function addRenameCodeManual(){
+  var input = g("newRenameCodeInput");
+  var code = input.value.trim().toUpperCase();
+
+  if(!code){
+    toast("Entrez un code","warn");
+    return;
+  }
+
+  var codes = loadCodes();
+
+  if(codes.find(function(c){ return c.code === code; })){
+    toast("Code déjà présent","warn");
+    return;
+  }
+
+  codes.push({
+    code: code,
+    excluded: false,
+    name: ""
+  });
+
+  saveCodes(codes);
+  input.value = "";
+
+  renderRenameList(); // refresh direct
+  toast("✅ Code '"+code+"' ajouté");
+}
 function closeSettings(){g("sPanel").classList.remove("open");}
 function saveCredentials(){
   localStorage.setItem("tcs_user",g("credUser").value.trim());
@@ -662,6 +701,11 @@ function saveCredentials(){
   closeSettings();
   toast("\u2705 Param\u00e8tres sauvegard\u00e9s","ok");
 }
+g("newRenameCodeInput").addEventListener("keypress", function(e){
+  if(e.key === "Enter"){
+    addRenameCodeManual();
+  }
+});
 function clearCredentials(){
   localStorage.removeItem("tcs_user");localStorage.removeItem("tcs_pass");localStorage.removeItem("tcs_auto");
   g("credUser").value="";g("credPass").value="";g("autoLoginToggle").checked=false;
