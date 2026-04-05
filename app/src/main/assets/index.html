@@ -266,7 +266,7 @@
 
   <div class="tabs">
     <div class="itab active" id="itab-site" onclick="switchTab('site')">&#127760; Depuis RHTime</div>
-    <div class="itab"         id="itab-file" onclick="switchTab('file')">&#128194; Fichier local</div>
+    <div class="itab"        id="itab-file" onclick="switchTab('file')">&#128194; Fichier local</div>
   </div>
 
   <div class="scroll">
@@ -298,7 +298,7 @@
 
       <div class="view-toggle">
         <div class="vt-btn active" id="vt-list" onclick="setView('list')">&#9776; Liste</div>
-        <div class="vt-btn"         id="vt-cal"  onclick="setView('cal')">&#128197; Calendrier</div>
+        <div class="vt-btn"        id="vt-cal"  onclick="setView('cal')">&#128197; Calendrier</div>
       </div>
 
       <div class="ev-list-wrap" id="evListWrap">
@@ -471,12 +471,14 @@ function isExcluded(code){
   return false;
 }
 
+// Appelé après le parsing du XML (Fichier local ET bridge Android)
 function registerCodes(evs){
   var codes=loadCodes();
   var existing=codes.map(function(c){return c.code;});
   var changed=false;
   evs.forEach(function(ev){
     if(ev.code&&existing.indexOf(ev.code)===-1){
+      // Nouveau code détecté
       codes.push({code:ev.code, excluded:false, name:""});
       existing.push(ev.code);
       changed=true;
@@ -509,7 +511,7 @@ function initDrag(listId) {
 
   list.addEventListener('touchmove', function(e) {
     if (!dragSrc) return;
-    e.preventDefault();
+    e.preventDefault(); // Empêche le scroll pendant le glissement
     var touch = e.touches[0];
     var target = document.elementFromPoint(touch.clientX, touch.clientY);
     var targetItem = target ? target.closest('.code-item') : null;
@@ -545,6 +547,8 @@ function updateOrder(listId) {
     if (found) newCodes.push(found);
   });
   saveCodes(newCodes);
+  
+  // Re-render pour s'assurer que les index internes correspondent visuellement
   if(listId === 'codesList') renderCodesList();
   if(listId === 'renameList') renderRenameList();
 }
@@ -591,7 +595,7 @@ function openCodesPanel(){
 }
 function closeCodesPanel(){
   g("codesPanel").classList.remove("open");
-  if(events.length)showPreview(events);
+  if(events.length)showPreview(events); // refresh preview
 }
 function renderCodesList(){
   var codes=loadCodes();
@@ -684,155 +688,177 @@ function openTCS(){
     if(auto&&user&&pass&&window.Android.setAutoLoginCredentials)
       window.Android.setAutoLoginCredentials(user,pass);
     window.Android.loadTCSPage();
-  } else {
-    window.open("https://tcs.eqso.be/RHTime","_blank");
   }
 }
-function pickFile(){g("fi-file").click();}
-g("fi-file").onchange=function(e){
-  var f=e.target.files[0];if(!f)return;
-  var r=new FileReader();
-  r.onload=function(ev){parseXML(ev.target.result);};
-  r.readAsText(f);
-};
+function pickFile(src){var input=g("fi-file");input.value="";input.click();}
+g("fi-file").onchange=function(){handleFile(g("fi-file").files[0]);};
 
-// ── PARSING ──────────────────────────────────────────────────────
-function parseXML(str){
-  try{
-    var p=new DOMParser();
-    var d=p.parseFromString(str,"text/xml");
-    var items=d.querySelectorAll("Journalier");
-    var res=[];
-    for(var i=0;i<items.length;i++){
-      var dateStr=items[i].getAttribute("Date");
-      var code=items[i].getAttribute("CodeHoraire");
-      var t1=normTime(items[i].getAttribute("HeureDeb1"));
-      var t2=normTime(items[i].getAttribute("HeureFin1"));
-      var t3=normTime(items[i].getAttribute("HeureDeb2"));
-      var t4=normTime(items[i].getAttribute("HeureFin2"));
-      if(dateStr&&code){
-        res.push({date:dateStr,code:code,h:[t1,t2,t3,t4]});
-      }
-    }
-    if(!res.length){toast("Aucune donn\u00e9e valide","err");return;}
-    events=res;
-    registerCodes(events);
-    showPreview(events);
-    toast("\u2705 "+events.length+" jours import\u00e9s");
-  }catch(e){toast("Erreur de lecture XML","err");}
+// ── PARSE XML ─────────────────────────────────────────────────────
+function parseXML(xml){
+  var doc=new DOMParser().parseFromString(xml,"application/xml");
+  if(doc.querySelector("parsererror"))throw new Error("Fichier XML invalide");
+  var evs=[];
+  doc.querySelectorAll("Table_ListeHoraire").forEach(function(row,i){
+    function gt(tag){var el=row.querySelector(tag);return el?el.textContent.trim():"";}
+    var dateRaw=gt("Date"),code=gt("Code");
+    if(!dateRaw||!code)return;
+    var m=dateRaw.match(/(\d{2}\/\d{2}\/\d{4})/);
+    if(!m)return;
+    evs.push({date:m[1],code:code,structure:gt("Structure"),
+      debut:gt("D\u00e9but"),fin:gt("Fin"),memo:gt("M\u00e9mo"),sousCode:gt("Sous-Code"),idx:i});
+  });
+  return evs;
 }
 
+// ── HANDLE FILE ───────────────────────────────────────────────────
+function handleFile(file){
+  if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var evs=parseXML(e.target.result);
+      if(!evs.length){toast("\u26a0\ufe0f Aucun \u00e9v\u00e9nement trouv\u00e9","warn");return;}
+      events=evs;
+      registerCodes(evs); // Apprentissage fichier local
+      showPreview(evs);
+      toast("\u2705 "+evs.length+" \u00e9v\u00e9nements charg\u00e9s");
+      if(window.Android&&window.Android.onXmlLoaded)window.Android.onXmlLoaded(evs.length);
+    }catch(err){toast("\u274c "+err.message,"err");}
+  };
+  reader.readAsText(file,"UTF-8");
+}
+
+// ── VIEW TOGGLE & PREVIEW ─────────────────────────────────────────
+var currentView="list";
 function setView(v){
-  var list=v==="list";
-  g("vt-list").classList.toggle("active",list);
-  g("vt-cal").classList.toggle("active",!list);
-  g("evListWrap").classList.toggle("hidden",!list);
-  g("calGrid").classList.toggle("active",!list);
+  currentView=v;
+  g("vt-list").classList.toggle("active",v==="list");
+  g("vt-cal").classList.toggle("active",v==="cal");
+  g("evListWrap").classList.toggle("hidden",v!=="list");
+  g("calGrid").classList.toggle("active",v==="cal");
 }
 
 function showPreview(evs){
+  var parts=evs[0].date.split("/");
+  var moName=MOIS[parseInt(parts[1])-1];
+  g("moLbl").textContent=moName;g("yrLbl").textContent=parts[2];
+  g("evMonth").textContent=moName+" "+parts[2];
+
+  var totalExported=evs.filter(function(ev){return !isExcluded(ev.code);}).length;
+  var totalIgnored=evs.length-totalExported;
+  g("evCount").textContent=totalExported;
+  g("evSub").textContent=totalIgnored>0?totalIgnored+" jour(s) ignor\u00e9(s) non export\u00e9(s)":"";
+
+  g("evList").innerHTML=evs.map(function(ev){
+    var p=ev.date.split("/");
+    var d=normTime(ev.debut)||"\u2014",f=normTime(ev.fin)||"\u2014";
+    var excl=isExcluded(ev.code);
+    var badge=excl?'<span class="ev-ign-badge">ignor\u00e9</span>':'';
+    return "<div class='ev-item"+(excl?" excluded":"")+"'>"
+      +"<span class='ev-date'>"+p[0]+"/"+p[1]+"</span>"
+      +"<span class='ev-code'>"+ev.code+"</span>"
+      +"<span class='ev-time'>"+d+"\u2192"+f+"</span>"
+      +(ev.structure?"<span class='ev-loc'>"+ev.structure+"</span>":"")
+      +badge+"</div>";
+  }).join("");
+
+  renderCalendar(evs, parseInt(parts[1])-1, parseInt(parts[2]));
+
   g("card1").className="card done";
   g("card2").className="card active";
   g("btnCal").disabled=false;g("btnShare").disabled=false;
+  g("card2").scrollIntoView({behavior:"smooth",block:"start"});
+}
 
-  var codes=loadCodes();
-  var filtered=evs.filter(function(e){return !isExcluded(e.code);});
-  g("evCount").textContent=filtered.length;
-  
-  if(evs.length){
-    var parts=evs[0].date.split("/");
-    g("evMonth").textContent=MOIS[parseInt(parts[1])-1].toUpperCase();
-    g("evSub").textContent=parts[2];
-    g("moLbl").textContent=MOIS[parseInt(parts[1])-1];
-    g("yrLbl").textContent=parts[2];
-  }
+function renderCalendar(evs, month, year){
+  var dowEl=g("calDow");
+  dowEl.innerHTML=DOW.map(function(d){return "<div class='cal-dow-cell'>"+d+"</div>";}).join("");
 
-  // LIST VIEW
-  var html="";
-  evs.forEach(function(e){
-    var excl=isExcluded(e.code);
-    var timeStr=e.h[0]?(e.h[0]+"-"+e.h[1]+(e.h[2]?" / "+e.h[2]+"-"+e.h[3]:"")):"Repos / Cong\u00e9";
-    html+='<div class="ev-item'+(excl?" excluded":"")+'">'
-      +'<div class="ev-date">'+e.date.split("/")[0]+"/"+e.date.split("/")[1]+'</div>'
-      +'<div class="ev-code">'+e.code+'</div>'
-      +'<div class="ev-time">'+timeStr+'</div>'
-      +(excl?'<div class="ev-ign-badge">ignor\u00e9</div>':'')
-      +'</div>';
+  var byDay={};
+  evs.forEach(function(ev){
+    var d=ev.date.split("/")[0];
+    var key=parseInt(d);
+    if(!byDay[key])byDay[key]=[];
+    byDay[key].push(ev);
   });
-  g("evList").innerHTML=html;
 
-  // CALENDAR VIEW
-  renderCalendar(evs);
-}
-
-function renderCalendar(evs){
-  if(!evs.length)return;
-  var parts=evs[0].date.split("/");
-  var m=parseInt(parts[1])-1, y=parseInt(parts[2]);
-  var first=new Date(y,m,1).getDay(); // 0=Sun
-  if(first===0)first=7; // 7=Sun
-  var last=new Date(y,m+1,0).getDate();
-  
-  g("calDow").innerHTML=DOW.map(function(d){return '<div class="cal-dow-cell">'+d+'</div>';}).join("");
-  var daysHtml="";
-  for(var i=1;i<first;i++) daysHtml+='<div class="cal-day empty"></div>';
-  
+  var firstDow=(new Date(year,month,1).getDay()+6)%7;
+  var daysInMonth=new Date(year,month+1,0).getDate();
   var today=new Date();
-  var isCurrentMonth=(today.getMonth()===m && today.getFullYear()===y);
-  var todayDate=today.getDate();
 
-  for(var d=1;d<=last;d++){
-    var dateS=pad(d)+"/"+pad(m+1)+"/"+y;
-    var ev=evs.find(function(x){return x.date===dateS;});
+  var daysEl=g("calDays");
+  var html="";
+  for(var i=0;i<firstDow;i++)html+="<div class='cal-day empty'></div>";
+
+  for(var d=1;d<=daysInMonth;d++){
+    var dayEvs=byDay[d]||[];
+    var isToday=(today.getDate()===d&&today.getMonth()===month&&today.getFullYear()===year);
+    var allExcl=dayEvs.length>0&&dayEvs.every(function(e){return isExcluded(e.code);});
+    var hasExp=dayEvs.some(function(e){return !isExcluded(e.code);});
+
     var cls="cal-day";
-    if(isCurrentMonth && d===todayDate) cls+=" today";
-    
-    if(ev){
+    if(isToday)cls+=" today";
+    if(allExcl)cls+=" all-excluded";
+    else if(hasExp||dayEvs.length)cls+=" has-event";
+
+    html+="<div class='"+cls+"'><div class='cal-day-num'>"+d+"</div>";
+    dayEvs.forEach(function(ev){
       var excl=isExcluded(ev.code);
-      cls+=excl?" all-excluded":" has-event";
-      daysHtml+='<div class="'+cls+'">'
-        +'<div class="cal-day-num">'+d+'</div>'
-        +'<div class="cal-code'+(excl?' excl':'')+'">'+ev.code+'</div>'
-        +'<div class="cal-time">'+(ev.h[0]||"")+'</div>'
-        +'</div>';
-    } else {
-      daysHtml+='<div class="'+cls+'"><div class="cal-day-num">'+d+'</div></div>';
-    }
+      var t=normTime(ev.debut)||"";
+      html+="<div class='cal-code"+(excl?" excl":"")+"'>"+ev.code+"</div>";
+      if(t&&!excl)html+="<div class='cal-time'>"+t+"</div>";
+    });
+    html+="</div>";
   }
-  g("calDays").innerHTML=daysHtml;
+  daysEl.innerHTML=html;
 }
 
-// ── BUILD ICS ────────────────────────────────────────────────────
+// ── BUILD ICS ─────────────────────────────────────────────────────
 function buildICS(evs){
-  var codes=loadCodes();
-  var lines=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//TCS//Calendar//FR","CALSCALE:GREGORIAN","METHOD:PUBLISH"];
-  evs.forEach(function(e){
-    if(isExcluded(e.code))return;
-    var p=e.date.split("/");
-    var dateBase=p[2]+p[1]+p[0];
-    
-    var c=codes.find(function(x){return x.code===e.code;});
-    var summary = (c && c.name) ? c.name : ("Travail - " + e.code);
+  var now=new Date();
+  var ds=now.getUTCFullYear()+pad(now.getUTCMonth()+1)+pad(now.getUTCDate())
+    +"T"+pad(now.getUTCHours())+pad(now.getUTCMinutes())+pad(now.getUTCSeconds())+"Z";
+  function esc(s){return(s||"").replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\n/g,"\\n");}
+  function dt(d,t){var p=d.split("/");var n=normTime(t)||"00:00";var h=n.split(":");
+    return p[2]+pad(p[1])+pad(p[0])+"T"+pad(h[0])+pad(h[1])+"00";}
+  function fold(l){if(l.length<=75)return l;
+    var r="",p=0;while(p<l.length){r+=(p===0?"":"\r\n ")+l.substring(p,p+(p===0?75:74));p+=(p===0?75:74);}return r;}
+  var lines=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//TCS ICS APK//FR",
+    "CALSCALE:GREGORIAN","METHOD:PUBLISH","X-WR-CALNAME:Horaire TCS","X-WR-TIMEZONE:Europe/Brussels",
+    "BEGIN:VTIMEZONE","TZID:Europe/Brussels",
+    "BEGIN:STANDARD","DTSTART:19701025T030000","RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=10",
+    "TZOFFSETFROM:+0200","TZOFFSETTO:+0100","TZNAME:CET","END:STANDARD",
+    "BEGIN:DAYLIGHT","DTSTART:19700329T020000","RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=3",
+    "TZOFFSETFROM:+0100","TZOFFSETTO:+0200","TZNAME:CEST","END:DAYLIGHT","END:VTIMEZONE"];
+  
+  var codesConfig = loadCodes();
 
-    if(e.h[0] && e.h[1]){
-      lines.push("BEGIN:VEVENT");
-      lines.push("DTSTART:"+dateBase+"T"+e.h[0].replace(":","")+"00");
-      lines.push("DTEND:"+dateBase+"T"+e.h[1].replace(":","")+"00");
-      lines.push("SUMMARY:"+summary);
-      lines.push("END:VEVENT");
-    }
-    if(e.h[2] && e.h[3]){
-      lines.push("BEGIN:VEVENT");
-      lines.push("DTSTART:"+dateBase+"T"+e.h[2].replace(":","")+"00");
-      lines.push("DTEND:"+dateBase+"T"+e.h[3].replace(":","")+"00");
-      lines.push("SUMMARY:"+summary);
-      lines.push("END:VEVENT");
-    }
+  evs.forEach(function(ev,i){
+    if(isExcluded(ev.code))return;
+    
+    // Récupérer le nom personnalisé s'il existe
+    var cnf = codesConfig.find(function(x){return x.code===ev.code;});
+    var evName = (cnf && cnf.name) ? cnf.name : ("Travail - " + ev.code);
+
+    var p=ev.date.split("/");
+    var deb=normTime(ev.debut),fin=normTime(ev.fin);
+    var notes=[ev.memo,ev.sousCode].filter(Boolean).join("\\n");
+    
+    lines.push("BEGIN:VEVENT",
+      "UID:tcs-"+ev.date.replace(/\//g,"-")+"-"+ev.code+"-"+i+"@eqso.be",
+      "DTSTAMP:"+ds,
+      deb&&fin?"DTSTART;TZID=Europe/Brussels:"+dt(ev.date,ev.debut):"DTSTART;VALUE=DATE:"+p[2]+pad(p[1])+pad(p[0]),
+      deb&&fin?"DTEND;TZID=Europe/Brussels:"+dt(ev.date,ev.fin):"DTEND;VALUE=DATE:"+p[2]+pad(p[1])+pad(p[0]),
+      "SUMMARY:"+esc(evName));
+    if(ev.structure)lines.push("LOCATION:"+esc(ev.structure));
+    if(notes)lines.push("DESCRIPTION:"+notes);
+    lines.push("END:VEVENT");
   });
   lines.push("END:VCALENDAR");
-  return lines.join("\r\n");
+  return lines.map(fold).join("\r\n")+"\r\n";
 }
 
+// ── EXPORT ICS ────────────────────────────────────────────────────
 function exportICS(openCal){
   if(!events.length)return;
   var ics=buildICS(events);
@@ -850,7 +876,6 @@ function exportICS(openCal){
   }
 }
 
-// ── RESET ─────────────────────────────────────────────────────────
 function reset(){
   events=[];
   g("card1").className="card active";
@@ -864,8 +889,14 @@ function reset(){
 var n=new Date();
 g("moLbl").textContent=MOIS[n.getMonth()];
 g("yrLbl").textContent=n.getFullYear();
+updateCodesNavSub();
+
+// Initialisation du drag and drop pour les deux listes
 initDrag('codesList');
 initDrag('renameList');
+
+var initCE=localStorage.getItem("tcs_confirm_exit")==="1";
+if(window.Android&&window.Android.setConfirmExit)window.Android.setConfirmExit(initCE);
 </script>
 </body>
 </html>
