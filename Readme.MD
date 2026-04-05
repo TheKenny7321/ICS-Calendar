@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/version-2.2-blue) ![Android](https://img.shields.io/badge/Android-7.0%2B-green)
+![Version](https://img.shields.io/badge/version-3.0-blue) ![Android](https://img.shields.io/badge/Android-7.0%2B-green)
 
 # ICS-Calendar 📅
 
@@ -9,6 +9,21 @@
 * **Zéro perte de données** : Toutes vos informations (mémos, codes horaires, lieux) sont conservées.
 * **Conversion automatique** : L'application détecte le XML et génère le fichier ICS instantanément.
 * **Flexibilité** : Ajoutez l'événement à votre agenda personnel ou partagez-le avec vos collègues.
+
+---
+
+## ⚙️ Nouvelles options de personnalisation
+
+La version 3 introduit des outils puissants dans les **Paramètres** pour nettoyer et organiser votre agenda :
+
+* **🚫 Codes à ignorer** : Ne polluez plus votre calendrier avec des informations inutiles.
+    > *Exemple : Ajoutez "F" ou "VA" à la liste pour que ces journées ne créent pas d'événements vides.*
+* **✏️ Renommage de codes** : Adaptez les codes bruts de RHTime pour qu'ils soient plus explicites.
+    > *Exemple : Transformez automatiquement le code "FOR" en "Formation".*
+* **🗓️ Vue Aperçu** : L'application intègre désormais un **mini-calendrier** lors de la conversion. Cela vous permet de valider d'un coup d'œil que toutes vos prestations ont bien été capturées avant l'export final.
+
+### Autres ajouts de la V3
+* **🔒 Confirmation avant de quitter** : Une sécurité supplémentaire dans le navigateur intégré pour éviter de perdre votre session RHTime par erreur.
 
 ---
 
@@ -48,6 +63,8 @@ Pour gagner du temps, allez dans les **Paramètres** de l'application et enregis
 <p align="center">
   <img src="https://github.com/user-attachments/assets/ebc2935a-46a3-4f22-a1e4-c69e13d8ef35" width="300">
 </p>
+
+
 
 ### Étape 2 : Récupérer l'horaire
 
