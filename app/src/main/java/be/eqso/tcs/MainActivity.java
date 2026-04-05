@@ -172,77 +172,110 @@ public class MainActivity extends AppCompatActivity {
                 return false;
             }
 
-            @Override
-            public void onPageFinished(WebView view, String url) {
-                // Injecter l'autologin uniquement sur la page de login TCS
-                // (pas sur index.html ni sur les pages déjà connectées)
-                if (autoLoginUser != null && autoLoginPass != null
-                        && url.contains("tcs.eqso.be")
-                        && !url.contains("RHTime/RHTIME_Planning")) {
+@Override
+public void onPageFinished(WebView view, String url) {
 
-                    Log.d(TAG, "Injecting autologin on: " + url);
+    // ───────────── AUTOLOGIN ─────────────
+    if (autoLoginUser != null && autoLoginPass != null
+            && url.contains("tcs.eqso.be")
+            && !url.contains("RHTime/RHTIME_Planning")) {
 
-                    // Échapper les valeurs pour JS
-                    String safeUser = autoLoginUser.replace("\\", "\\\\").replace("'", "\\'");
-                    String safePass = autoLoginPass.replace("\\", "\\\\").replace("'", "\\'");
+        Log.d(TAG, "Injecting autologin on: " + url);
 
-                    // Script universel : trouve tous les inputs visibles,
-                    // le 1er text = login, le 1er password = mdp, puis cherche le bouton submit
-                    String js =
-                        "(function(){" +
-                        "var MAX=10,tries=0;" +
-                        "function fill(){" +
-                        "  tries++;" +
-                        // Tous les inputs texte visibles non désactivés
-                        "  var all=[].slice.call(document.querySelectorAll('input'));" +
-                        "  var texts=all.filter(function(i){" +
-                        "    return (i.type==='text'||i.type==='email'||i.type==='')" +
-                        "      &&!i.disabled&&!i.readOnly" +
-                        "      &&i.offsetParent!==null;" +  // visible
-                        "  });" +
-                        "  var passes=all.filter(function(i){" +
-                        "    return i.type==='password'&&!i.disabled&&i.offsetParent!==null;" +
-                        "  });" +
-                        "  if(texts.length===0||passes.length===0){" +
-                        "    if(tries<MAX)setTimeout(fill,600);" +
-                        "    return;" +
-                        "  }" +
-                        "  var u=texts[0],p=passes[0];" +
-                        "  u.value='" + safeUser + "';" +
-                        "  p.value='" + safePass + "';" +
-                        // Déclencher les événements pour que WinDev détecte le changement
-                        "  ['input','change','keyup','blur'].forEach(function(ev){" +
-                        "    u.dispatchEvent(new Event(ev,{bubbles:true}));" +
-                        "    p.dispatchEvent(new Event(ev,{bubbles:true}));" +
-                        "  });" +
-                        // Chercher le bouton submit
-                        "  var btn=document.querySelector(" +
-                        "    'input[type=submit],button[type=submit]');" +
-                        "  if(!btn){" +
-                        // Fallback : chercher un élément cliquable contenant "connect" ou "login"
-                        "    var elems=[].slice.call(document.querySelectorAll('a,button,input[type=button],[onclick]'));" +
-                        "    btn=elems.find(function(e){" +
-                        "      var t=(e.textContent||e.value||'').toLowerCase();" +
-                        "      return t.indexOf('connect')>=0||t.indexOf('login')>=0" +
-                        "        ||t.indexOf('valider')>=0||t.indexOf('ok')===t.trim().length-2;" +
-                        "    })||null;" +
-                        "  }" +
-                        "  if(btn){" +
-                        "    setTimeout(function(){btn.click();},500);" +
-                        "  } else {" +
-                        // Dernier recours : soumettre le formulaire parent
-                        "    var f=u.closest('form');" +
-                        "    if(f)setTimeout(function(){f.submit();},500);" +
-                        "  }" +
-                        "}" +
-                        "setTimeout(fill,800);" +
-                        "})();";
+        String safeUser = autoLoginUser.replace("\\", "\\\\").replace("'", "\\'");
+        String safePass = autoLoginPass.replace("\\", "\\\\").replace("'", "\\'");
 
-                    mainHandler.postDelayed(() ->
-                        view.evaluateJavascript(js, res -> Log.d(TAG, "AutoLogin JS: " + res)),
-                        500);
-                }
-            }
+        String js =
+            "(function(){" +
+            "var MAX=10,tries=0;" +
+            "function fill(){" +
+            "  tries++;" +
+            "  var all=[].slice.call(document.querySelectorAll('input'));" +
+            "  var texts=all.filter(function(i){" +
+            "    return (i.type==='text'||i.type==='email'||i.type==='')" +
+            "      &&!i.disabled&&!i.readOnly" +
+            "      &&i.offsetParent!==null;" +
+            "  });" +
+            "  var passes=all.filter(function(i){" +
+            "    return i.type==='password'&&!i.disabled&&i.offsetParent!==null;" +
+            "  });" +
+            "  if(texts.length===0||passes.length===0){" +
+            "    if(tries<MAX)setTimeout(fill,600);" +
+            "    return;" +
+            "  }" +
+            "  var u=texts[0],p=passes[0];" +
+            "  u.value='" + safeUser + "';" +
+            "  p.value='" + safePass + "';" +
+            "  ['input','change','keyup','blur'].forEach(function(ev){" +
+            "    u.dispatchEvent(new Event(ev,{bubbles:true}));" +
+            "    p.dispatchEvent(new Event(ev,{bubbles:true}));" +
+            "  });" +
+            "  var btn=document.querySelector('input[type=submit],button[type=submit]');" +
+            "  if(!btn){" +
+            "    var elems=[].slice.call(document.querySelectorAll('a,button,input[type=button],[onclick]'));" +
+            "    btn=elems.find(function(e){" +
+            "      var t=(e.textContent||e.value||'').toLowerCase();" +
+            "      return t.indexOf('connect')>=0||t.indexOf('login')>=0" +
+            "        ||t.indexOf('valider')>=0||t.indexOf('ok')===t.trim().length-2;" +
+            "    })||null;" +
+            "  }" +
+            "  if(btn){" +
+            "    setTimeout(function(){btn.click();},500);" +
+            "  } else {" +
+            "    var f=u.closest('form');" +
+            "    if(f)setTimeout(function(){f.submit();},500);" +
+            "  }" +
+            "}" +
+            "setTimeout(fill,800);" +
+            "})();";
+
+        mainHandler.postDelayed(() ->
+            view.evaluateJavascript(js, res -> Log.d(TAG, "AutoLogin JS: " + res)),
+            500);
+    }
+
+    // ───────────── BOUTON EXPORT XML ─────────────
+    if (url.contains("RHTIME_Planning")) {
+
+        String jsButton =
+            "(function(){" +
+            "if(document.getElementById('tcsExportBtn')) return;" +
+
+            "var btn=document.createElement('div');" +
+            "btn.id='tcsExportBtn';" +
+            "btn.innerText='📥 Exporter ce mois';" +
+
+            "btn.style.position='fixed';" +
+            "btn.style.bottom='calc(20px + env(safe-area-inset-bottom))';" +
+            "btn.style.left='50%';" +
+            "btn.style.transform='translateX(-50%)';" +
+            "btn.style.zIndex='9999';" +
+            "btn.style.padding='14px 20px';" +
+            "btn.style.background='linear-gradient(135deg,#0ea5e9,#22c55e)';" +
+            "btn.style.color='#fff';" +
+            "btn.style.fontSize='16px';" +
+            "btn.style.fontWeight='bold';" +
+            "btn.style.borderRadius='12px';" +
+            "btn.style.boxShadow='0 6px 20px rgba(0,0,0,0.3)';" +
+            "btn.style.cursor='pointer';" +
+            "btn.style.userSelect='none';" +
+
+            // VERSION ROBUSTE (RECOMMANDÉE)
+            "btn.onclick=function(){" +
+            "  var link=document.querySelector(\"a[href*='export.xml']\");" +
+            "  if(link){ window.location.href=link.href; }" +
+            "  else{ alert('Lien export introuvable'); }" +
+            "};" +
+
+            "document.body.appendChild(btn);" +
+            "})();";
+
+        mainHandler.postDelayed(() ->
+            view.evaluateJavascript(jsButton, null),
+            800);
+    }
+}
+			
         };
     }
 
