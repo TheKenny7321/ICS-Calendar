@@ -303,7 +303,7 @@ public class MainActivity extends AppCompatActivity {
         webView.loadUrl("file:///android_asset/index.html");
     }
 
-    @Override
+	@Override
     public void onBackPressed() {
         // Priorité 1 : panel codes ouvert → fermer
         // Priorité 2 : panel settings ouvert → fermer
@@ -317,10 +317,14 @@ public class MainActivity extends AppCompatActivity {
             "  return 'none';" +
             "})()",
             result -> {
-                if (""codes"".equals(result)) {
+                // evaluateJavascript renvoie la chaîne entourée de guillemets (ex: '"codes"').
+                // On nettoie la chaîne pour éviter les problèmes de comparaison.
+                String cleanResult = result != null ? result.replace("\"", "") : "";
+
+                if ("codes".equals(cleanResult)) {
                     mainHandler.post(() ->
                         webView.evaluateJavascript("closeCodesPanel();", null));
-                } else if (""settings"".equals(result)) {
+                } else if ("settings".equals(cleanResult)) {
                     mainHandler.post(() ->
                         webView.evaluateJavascript("closeSettings();", null));
                 } else if (webView.canGoBack()) {
