@@ -370,6 +370,14 @@
       </div>
       <div class="s-nav-arrow">&#8250;</div>
     </button>
+	
+	<button class="s-nav-btn" onclick="openDeletePanel()" style="margin-bottom:20px">
+  <div>
+    <div class="s-nav-label">🗑️ Supprimer des codes</div>
+    <div class="s-nav-sub">Nettoyer la liste des codes enregistrés</div>
+  </div>
+  <div class="s-nav-arrow">›</div>
+</button>
 
     <div class="s-section">Comportement</div>
     <div class="s-card">
@@ -437,6 +445,28 @@
     <div id="codesList" style="position:relative;"></div>
     <p id="codesEmpty" style="font-size:12px;color:var(--muted);text-align:center;padding:20px 0">
       Aucun code rencontr&#233; pour l'instant.<br>Importez un planning pour voir les codes.
+    </p>
+  </div>
+</div>
+
+<div class="codes-panel" id="deletePanel">
+  <div class="s-hdr">
+    <button class="btn-x" onclick="closeDeletePanel()">←</button>
+    <div class="s-hdr-title">🗑️ Supprimer des codes</div>
+  </div>
+  <div class="s-scroll">
+    <p style="font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:14px">
+      Supprimez les codes que vous ne voulez plus voir apparaître dans les listes.<br>
+      <strong style="color:var(--err)">Cette action est irréversible.</strong>
+    </p>
+
+    <button class="btn btn-danger" id="btnDeleteAll" onclick="deleteAllCodes()" style="margin-bottom:20px">
+      ⚠️ Tout supprimer
+    </button>
+
+    <div id="deleteList"></div>
+    <p id="deleteEmpty" style="font-size:12px;color:var(--muted);text-align:center;padding:20px 0;display:none;">
+      Aucun code enregistré.
     </p>
   </div>
 </div>
@@ -572,22 +602,53 @@ function closeRenamePanel(){
   g("renamePanel").classList.remove("open");
 }
 function renderRenameList(){
-  var codes=loadCodes();
-  var list=g("renameList");
-  var empty=g("renameEmpty");
-  if(codes.length===0){list.innerHTML="";empty.style.display="block";return;}
-  empty.style.display="none";
+  var codes = loadCodes();
+  var list = g("renameList");
+  var empty = g("renameEmpty");
   
-  list.innerHTML=codes.map(function(c){
+  if(codes.length === 0){
+    list.innerHTML = "";
+    empty.style.display = "block";
+    return;
+  }
+  
+  empty.style.display = "none";
+  list.innerHTML = codes.map(function(c){
     var defaultName = "Travail - " + c.code;
-    var currentName = c.name || defaultName;
-	return '<div class="code-item" data-code="'+c.code+'">'
-  +'<div class="drag-handle" title="Glisser pour réorganiser">&#9776;</div>'
-  +'<span class="code-badge">'+c.code+'</span>'
-  +'<input type="text" class="rename-input" placeholder="'+defaultName+'" value="'+currentName.replace(/"/g, '&quot;')+'" onchange="updateCodeName(\''+c.code+'\',this.value)">'
-  +'<button class="code-del" onclick="removeCode(\''+c.code+'\')" title="Supprimer">&#128465;</button>'
-  +'</div>';
+    // On ajoute un style gris si le code est ignoré pour bien le différencier
+    var opacityStyle = c.excluded ? 'style="opacity:0.6"' : '';
+
+    return '<div class="code-item" '+opacityStyle+'>'
+      +'<span class="code-badge">'+c.code+'</span>'
+      +'<input type="text" class="rename-input" value="'+(c.name||"")+'" '
+      +'placeholder="'+defaultName+'" '
+      +'onchange="renameCode(\''+c.code+'\', this.value)" '
+      +'style="flex:1; margin-left:10px;' + (c.excluded ? 'text-decoration:line-through;' : '') + '">'
+      +'</div>';
   }).join("");
+}
+
+function renameCode(codeStr, newName) {
+  var codes = loadCodes();
+  var found = false;
+
+  for (var i = 0; i < codes.length; i++) {
+    if (codes[i].code === codeStr) {
+      codes[i].name = newName.trim();
+      found = true;
+      break;
+    }
+  }
+
+  if (found) {
+    saveCodes(codes);
+    updateCodesNavSub(); // Met à jour le petit texte dans les réglages
+    toast("✅ Nom mis à jour", "ok", 1000);
+    
+    // On ne rappelle PAS renderRenameList() ici volontairement.
+    // Si on le faisait, l'input perdrait le focus (clavier qui se ferme) 
+    // à chaque modification.
+  }
 }
 
 function updateCodeName(codeStr, val){
@@ -609,18 +670,28 @@ function closeCodesPanel(){
   if(events.length)showPreview(events); // refresh preview
 }
 function renderCodesList(){
-  var codes=loadCodes();
-  var list=g("codesList");
-  var empty=g("codesEmpty");
-  if(codes.length===0){list.innerHTML="";empty.style.display="block";return;}
-  empty.style.display="none";
-  list.innerHTML=codes.map(function(c){
+  var codes = loadCodes();
+  var list = g("codesList");
+  var empty = g("codesEmpty");
+  
+  if(codes.length === 0){
+    list.innerHTML = "";
+    empty.style.display = "block";
+    return;
+  }
+  
+  empty.style.display = "none";
+  list.innerHTML = codes.map(function(c){
+    var defaultName = "Travail - " + c.code;
+    var currentName = c.name || defaultName;
+    var labelStyle = c.excluded ? 'style="text-decoration:line-through; color:var(--muted)"' : '';
+
     return '<div class="code-item'+(c.excluded?" excl-item":"")+'" data-code="'+c.code+'">'
-      +'<div class="drag-handle" title="Glisser pour réorganiser">&#9776;</div>'
+      +'<div class="drag-handle">☰</div>'
       +'<span class="code-badge">'+c.code+'</span>'
-      +'<span class="code-label">'+(c.excluded?'<em style="color:var(--muted)">Ignor\u00e9</em>':'Export\u00e9')+'</span>'
-      +'<input type="checkbox" class="code-cb" title="Ignorer ce code"'+(c.excluded?" checked":"")+' onchange="toggleExcluded(\''+c.code+'\',this.checked)">'
-      +'<button class="code-del" onclick="removeCode(\''+c.code+'\')" title="Supprimer">&#128465;</button>'
+      +'<span class="code-label" '+labelStyle+'>'+currentName+'</span>'
+      // On garde la checkbox mais on retire le bouton de suppression 🗑️
+      +'<input type="checkbox" class="code-cb" style="margin-left:auto" title="Ignorer ce code"'+(c.excluded?" checked":"")+' onchange="toggleExcluded(\''+c.code+'\',this.checked)">'
       +'</div>';
   }).join("");
 }
@@ -652,6 +723,97 @@ function addCodeManual(){
   renderCodesList();
   toast("\u2705 Code '"+code+"' ajout\u00e9");
 }
+
+// ── PANNEAU SUPPRESSION ──────────────────────────────────────────
+var deleteConfirmStage = 0;
+
+function openDeletePanel(){
+  renderDeleteList();
+  deleteConfirmStage = 0;
+  g("btnDeleteAll").textContent = "⚠️ Tout supprimer";
+  g("deletePanel").classList.add("open");
+}
+
+function closeDeletePanel(){
+  g("deletePanel").classList.remove("open");
+}
+
+function renderDeleteList(){
+  var codes = loadCodes();
+  var list = g("deleteList");
+  var empty = g("deleteEmpty");
+  
+  if(codes.length === 0){
+    list.innerHTML = "";
+    empty.style.display = "block";
+    return;
+  }
+  
+  empty.style.display = "none";
+  list.innerHTML = codes.map(function(c){
+    var defaultName = "Travail - " + c.code;
+    var currentName = c.name || defaultName;
+    
+    // AJOUT : On définit le style barré si le code est marqué comme exclu
+    var labelStyle = c.excluded ? 'style="text-decoration:line-through; color:var(--muted)"' : '';
+
+    return '<div class="code-item" data-code="'+c.code+'">'
+      +'<span class="code-badge">'+c.code+'</span>'
+      // AJOUT : On applique la variable labelStyle ici
+      +'<span class="code-label" '+labelStyle+' style="margin-left:8px">' + currentName + '</span>'
+      +'<button class="code-del" onclick="removeCodeFromDelete(\''+c.code+'\')" style="font-size:20px; margin-left:auto">×</button>'
+      +'</div>';
+  }).join("");
+}
+
+// Suppression individuelle avec rafraîchissement de la liste locale
+function removeCodeFromDelete(codeStr){
+  removeCode(codeStr); // Utilise votre fonction existante
+  renderDeleteList();  // Rafraîchit l'affichage spécifique
+}
+
+// Suppression totale avec double confirmation
+function deleteAllCodes(){
+  var btn = g("btnDeleteAll");
+  if(deleteConfirmStage === 0){
+    deleteConfirmStage = 1;
+    btn.textContent = "CONFIRMER LA SUPPRESSION ?";
+    btn.style.background = "var(--warn)"; // Orange pour prévenir
+    btn.style.color = "#000"; // Texte noir pour le contraste
+    
+    setTimeout(function(){
+      if(deleteConfirmStage === 1){
+        deleteConfirmStage = 0;
+        btn.textContent = "⚠️ Tout supprimer";
+        btn.style.background = "";
+        btn.style.color = "";
+      }
+    }, 3000);
+  } else {
+    localStorage.removeItem("tcs_codes");
+    deleteConfirmStage = 0;
+    btn.textContent = "⚠️ Tout supprimer";
+    btn.style.background = "";
+    btn.style.color = "";
+    updateCodesNavSub();
+    renderDeleteList();
+    toast("🗑️ Tous les codes ont été supprimés", "info");
+  }
+}
+// Fonction générique pour valider un input sur Enter
+function handleEnter(event, callback) {
+  if (event.key === "Enter") {
+    event.preventDefault(); // empêche le comportement par défaut (soumission de formulaire)
+    callback();             // appelle la fonction de validation
+  }
+}
+
+// Exemple d'utilisation pour ajouter un code manuel
+const newRenameInput = document.getElementById('newRenameCodeInput');
+newRenameInput.addEventListener('keydown', (e) => handleEnter(e, addRenameCodeManual));
+
+const newCodeInput = document.getElementById('newCodeInput');
+newCodeInput.addEventListener('keydown', (e) => handleEnter(e, addCodeManual));
 
 // ── SETTINGS ─────────────────────────────────────────────────────
 g("settingsBtn").addEventListener("click",function(){
