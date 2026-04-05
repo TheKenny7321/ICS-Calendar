@@ -123,7 +123,7 @@ public class MainActivity extends AppCompatActivity {
         }).start();
     }
 
-    // ── Charger index.html puis injecter le XML ───────────────────────────────
+// ── Charger index.html puis injecter le XML ───────────────────────────────
     private void loadHomeAndInject(final String safeXml) {
         onTCSPage = false;        // on quitte le site TCS
         webView.stopLoading();
@@ -139,6 +139,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 if (!url.contains("android_asset")) return;
+                
+                // On rétablit le client par défaut qui contient l'injection du bouton
                 webView.setWebViewClient(defaultClient());
 
                 mainHandler.postDelayed(() -> {
@@ -151,7 +153,6 @@ public class MainActivity extends AppCompatActivity {
                         "    return;" +
                         "  }" +
                         "  events=evs;" +
-                        // FIX: On ajoute l'appel pour apprendre les codes automatiquement !
                         "  if(typeof registerCodes === 'function') registerCodes(evs);" +
                         "  showPreview(evs);" +
                         "  Android.onXmlLoaded(evs.length);" +
@@ -163,6 +164,45 @@ public class MainActivity extends AppCompatActivity {
                 }, 800);
             }
         });
+    }
+
+    // Assurez-vous que votre méthode defaultClient() ressemble à ceci pour inclut l'injection :
+    private WebViewClient defaultClient() {
+        return new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                
+                // Si on est sur la page de planning, on injecte le bouton d'exportation
+                if (url.contains("RHTime/RHTIME_Planning")) {
+                    injectExportButton(view);
+                }
+            }
+        };
+    }
+
+    private void injectExportButton(WebView view) {
+        String js = "(function() {" +
+                "  if (document.getElementById('quick-export-btn')) return;" +
+                "  var parts = window.location.href.split('/');" +
+                "  var sessionId = parts[parts.length-2];" +
+                "  var exportUrl = 'https://tcs.eqso.be/RHTime/RHTIME_Planning/' + sessionId + '/export.xml?WD_ACTION_=EXPORTXML&A9';" +
+                "  " +
+                "  var btn = document.createElement('div');" +
+                "  btn.id = 'quick-export-btn';" +
+                "  btn.innerHTML = '📅 Exporter ce mois';" +
+                "  btn.style = 'position:fixed; bottom:25px; left:50%; transform:translateX(-50%); " +
+                "               background:#2563eb; color:white; padding:14px 25px; border-radius:30px; " +
+                "               font-weight:bold; font-family:sans-serif; z-index:99999; " +
+                "               box-shadow:0 6px 20px rgba(0,0,0,0.4); border:2px solid rgba(255,255,255,0.2)';" +
+                "  btn.onclick = function() {" +
+                "    this.style.background = '#10b981';" +
+                "    this.innerHTML = '⏳ Génération...';" +
+                "    window.location.href = exportUrl;" +
+                "  };" +
+                "  document.body.appendChild(btn);" +
+                "})();";
+        view.evaluateJavascript(js, null);
     }
 
     private WebViewClient defaultClient() {
