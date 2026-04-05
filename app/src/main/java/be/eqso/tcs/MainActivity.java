@@ -125,7 +125,10 @@ public class MainActivity extends AppCompatActivity {
 
     // ── Charger index.html puis injecter le XML ───────────────────────────────
     private void loadHomeAndInject(final String safeXml) {
-        onTCSPage = false;        // on quitte le site TCS
+        onTCSPage = false;
+        // Cacher le bouton flottant RHTime
+        webView.evaluateJavascript(
+            "if(typeof hideRHTimeExportBtn==='function') hideRHTimeExportBtn();", null);
         webView.stopLoading();
         webView.clearHistory();
         webView.loadUrl("file:///android_asset/index.html");
@@ -174,6 +177,34 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onPageFinished(WebView view, String url) {
+                // Bouton flottant : extraire le token de session RHTime depuis l'URL
+                if (url.contains("tcs.eqso.be")) {
+                    java.util.regex.Matcher m = java.util.regex.Pattern
+                        .compile("/RHTIME_Planning/([^/?]+)", java.util.regex.Pattern.CASE_INSENSITIVE)
+                        .matcher(url);
+                    if (m.find()) {
+                        final String token = m.group(1);
+                        Log.d(TAG, "RHTime session token: " + token);
+                        // Afficher le bouton flottant avec le token
+                        mainHandler.postDelayed(() ->
+                            view.evaluateJavascript(
+                                "if(typeof showRHTimeExportBtn==='function') showRHTimeExportBtn('" + token + "');",
+                                null), 500);
+                    } else {
+                        // Page login ou autre → cacher le bouton
+                        mainHandler.post(() ->
+                            view.evaluateJavascript(
+                                "if(typeof hideRHTimeExportBtn==='function') hideRHTimeExportBtn();",
+                                null));
+                    }
+                } else {
+                    // Page index.html → cacher le bouton
+                    mainHandler.post(() ->
+                        view.evaluateJavascript(
+                            "if(typeof hideRHTimeExportBtn==='function') hideRHTimeExportBtn();",
+                            null));
+                }
+
                 // Injecter l'autologin uniquement sur la page de login TCS
                 // (pas sur index.html ni sur les pages déjà connectées)
                 if (autoLoginUser != null && autoLoginPass != null
@@ -430,6 +461,16 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @JavascriptInterface
-        public String getAppVersion() { return "2.0"; }
+        public void downloadXmlFromUrl(String url) {
+            // Téléchargement direct de l'URL XML RHTime (comme HttpURLConnection)
+            android.webkit.CookieManager cm = android.webkit.CookieManager.getInstance();
+            String cookies = cm.getCookie(url);
+            final String finalCookies = (cookies != null) ? cookies : "";
+            downloadXmlDirectly(url, finalCookies);
+            // Réinitialiser le bouton après déclenchement (sera fait via loadHomeAndInject)
+        }
+
+        @JavascriptInterface
+        public String getAppVersion() { return "2.3"; }
     }
 }

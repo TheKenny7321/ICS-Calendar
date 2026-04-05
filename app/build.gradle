@@ -10,17 +10,27 @@ android {
         applicationId "be.eqso.tcs"
         minSdk 26
         targetSdk 34
-        versionCode 1
-        versionName "1.0"
+        versionCode 3
+        versionName "2.3"
+    }
+
+    signingConfigs {
+        release {
+            storeFile     file(System.getenv("KEYSTORE_PATH") ?: "keystore.jks")
+            storePassword System.getenv("KEYSTORE_PASSWORD") ?: "android"
+            keyAlias      System.getenv("KEY_ALIAS")         ?: "tcs"
+            keyPassword   System.getenv("KEY_PASSWORD")      ?: "android"
+        }
     }
 
     buildTypes {
         release {
             minifyEnabled false
-            signingConfig signingConfigs.debug   // debug cert pour APK direct
+            signingConfig signingConfigs.release
         }
         debug {
-            applicationIdSuffix ".debug"
+            // Pas de suffix — même applicationId que release pour les mises à jour
+            signingConfig signingConfigs.release
         }
     }
 
