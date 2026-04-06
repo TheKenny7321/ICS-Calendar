@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/version-3.3-blue) ![Android](https://img.shields.io/badge/Android-7.0%2B-green)
+![Version](https://img.shields.io/badge/version-4.0-blue) ![Android](https://img.shields.io/badge/Android-7.0%2B-green)
 
 # ICS-Calendar 📅
 
