@@ -14,7 +14,7 @@
 
 ## ⚙️ Nouvelles options de personnalisation
 
-La version 3 introduit des outils puissants dans les **Paramètres** pour nettoyer et organiser votre agenda :
+### La version 3 introduit des outils puissants dans les **Paramètres** pour nettoyer et organiser votre agenda :
 
 * **🚫 Codes à ignorer** : Ne polluez plus votre calendrier avec des informations inutiles.
     > *Exemple : Ajoutez "F" ou "VA" à la liste pour que ces journées ne créent pas d'événements vides.*
@@ -22,8 +22,31 @@ La version 3 introduit des outils puissants dans les **Paramètres** pour nettoy
     > *Exemple : Transformez automatiquement le code "FOR" en "Formation".*
 * **🗓️ Vue Aperçu** : L'application intègre désormais un **mini-calendrier** lors de la conversion. Cela vous permet de valider d'un coup d'œil que toutes vos prestations ont bien été capturées avant l'export final.
 
-### Autres ajouts de la V3
 * **🔒 Confirmation avant de quitter** : Une sécurité supplémentaire dans le navigateur intégré pour éviter de perdre votre session RHTime par erreur.
+
+---
+
+### 🚀 Nouveautés de la version 4
+
+La version 4 marque une évolution majeure en simplifiant encore davantage l’expérience utilisateur et en rendant l’application plus autonome :
+
+* **🔄 Mise à jour simplifiée**
+  * Recevez désormais une **notification automatique** lorsqu’une nouvelle version est disponible.
+  * Les mises à jour peuvent être installées **sans désinstaller l’application existante**.  
+  > *Un gain de temps et une transition fluide vers les nouvelles versions.*
+
+* **📤 Export XML intégré**
+  * Un **bouton d’export dédié** apparaît directement dans votre session RHTime.
+  * Plus besoin de manipulations complexes : l’export de votre horaire se fait en **un seul geste**.  
+  > *Une expérience plus rapide, plus intuitive et sans friction.*
+
+---
+
+### 💡 Améliorations globales
+
+* Interface encore plus fluide et logique
+* Réduction des étapes nécessaires à l’export
+* Meilleure intégration avec le navigateur embarqué
 
 ---
 
