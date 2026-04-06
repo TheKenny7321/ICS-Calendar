@@ -1171,7 +1171,9 @@ function checkForUpdate() {
   fetch("https://api.github.com/repos/TheKenny7321/ICS-Calendar/releases/latest")
     .then(function(r){ return r.json(); })
     .then(function(data) {
-      var latest = (data.tag_name || "").replace(/^v/i, "");
+      var raw = data.tag_name || "";
+      var numMatch = raw.match(/(\d+\.\d+(?:\.\d+)?)/);
+      var latest = numMatch ? numMatch[1] : "";
       if (!latest) { el.innerHTML = ""; return; }
       if (latest !== APP_VERSION) {
         el.innerHTML = '<span class="version-ok" style="color:var(--warn)">&#x1F4E6; v'+latest+' disponible !</span>';
