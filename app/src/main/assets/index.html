@@ -422,13 +422,13 @@
     <div class="version-row">
       <div>
         <div class="version-info">Version actuelle</div>
-        <div class="version-num" id="versionDisplay">3.3</div>
+        <div class="version-num" id="versionDisplay">4.0</div>
         <div id="updateStatus"></div>
       </div>
-      <a id="githubLink" href="https://github.com/TheKenny7321/ICS-Calendar/releases/latest"
-         style="display:none" target="_blank" class="version-update">
+      <button id="githubLink" onclick="openExternalUrl('https://github.com/TheKenny7321/ICS-Calendar/releases/latest')"
+         style="display:none;cursor:pointer" class="version-update">
         &#8595; T&#233;l&#233;charger
-      </a>
+      </button>
     </div>
 
   </div>
@@ -577,44 +577,46 @@ function updateCodesNavSub(){
 }
 
 // ── GLISSER-DEPOSER (TOUCH DRAG & DROP) ──────────────────────────
-function initDrag(listId) {
-  var list = g(listId);
-  if(!list) return;
-  var dragSrc = null;
+// Drag & drop global — fonctionne même après re-render des listes
+var _drag = { src: null, listId: null };
 
-  list.addEventListener('touchstart', function(e) {
-    var handle = e.target.closest('.drag-handle');
-    if (!handle) return;
-    var item = handle.closest('.code-item');
-    dragSrc = item;
-    item.classList.add('dragging');
-  }, {passive: false});
+document.addEventListener('touchstart', function(e) {
+  var handle = e.target.closest('.drag-handle');
+  if (!handle) return;
+  var item = handle.closest('.code-item');
+  if (!item) return;
+  var list = item.parentNode;
+  _drag.src = item;
+  _drag.listId = list.id;
+  item.classList.add('dragging');
+}, {passive: false});
 
-  list.addEventListener('touchmove', function(e) {
-    if (!dragSrc) return;
-    e.preventDefault(); // Empêche le scroll pendant le glissement
-    var touch = e.touches[0];
-    var target = document.elementFromPoint(touch.clientX, touch.clientY);
-    var targetItem = target ? target.closest('.code-item') : null;
-    
-    if (targetItem && targetItem !== dragSrc && targetItem.parentNode === list) {
-      var rect = targetItem.getBoundingClientRect();
-      var mid = rect.top + rect.height / 2;
-      if (touch.clientY < mid) {
-        list.insertBefore(dragSrc, targetItem);
-      } else {
-        list.insertBefore(dragSrc, targetItem.nextSibling);
-      }
+document.addEventListener('touchmove', function(e) {
+  if (!_drag.src) return;
+  e.preventDefault();
+  var touch = e.touches[0];
+  var target = document.elementFromPoint(touch.clientX, touch.clientY);
+  var targetItem = target ? target.closest('.code-item') : null;
+  var list = _drag.src.parentNode;
+  if (targetItem && targetItem !== _drag.src && targetItem.parentNode === list) {
+    var rect = targetItem.getBoundingClientRect();
+    if (touch.clientY < rect.top + rect.height / 2) {
+      list.insertBefore(_drag.src, targetItem);
+    } else {
+      list.insertBefore(_drag.src, targetItem.nextSibling);
     }
-  }, {passive: false});
+  }
+}, {passive: false});
 
-  list.addEventListener('touchend', function(e) {
-    if (!dragSrc) return;
-    dragSrc.classList.remove('dragging');
-    dragSrc = null;
-    updateOrder(listId);
-  });
-}
+document.addEventListener('touchend', function(e) {
+  if (!_drag.src) return;
+  _drag.src.classList.remove('dragging');
+  var listId = _drag.listId;
+  _drag.src = null; _drag.listId = null;
+  if (listId) updateOrder(listId);
+});
+
+function initDrag(listId) { /* géré globalement */ }
 
 function updateOrder(listId) {
   var list = g(listId);
@@ -1136,7 +1138,17 @@ function reset(){
 
 
 // ── BOUTON FLOTTANT RHTIME EXPORT ────────────────────────────────
-var APP_VERSION = "3.3";
+var APP_VERSION = "4.0";
+
+function openExternalUrl(url) {
+  // Ouvre dans le navigateur système externe (Chrome, Firefox...)
+  if (window.Android && window.Android.openExternalBrowser) {
+    window.Android.openExternalBrowser(url);
+  } else {
+    window.open(url, '_blank');
+  }
+}
+
 var rhtimeExportBtn = g("rhtimeExportBtn");
 
 // Appelé depuis MainActivity quand la page RHTime est chargée
