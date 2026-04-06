@@ -44,6 +44,8 @@ public class MainActivity extends AppCompatActivity {
     private boolean confirmExit    = false;
     private long    lastBackPress  = 0;
     private boolean onTCSPage      = false; // true = WebView affiche le site TCS
+    private Button  btnExportXml   = null;
+    private String  rhtimeToken    = null;  // token session RHTime
 
     // ── File picker manuel ────────────────────────────────────────────────────
     private final ActivityResultLauncher<Intent> filePickerLauncher =
@@ -126,9 +128,11 @@ public class MainActivity extends AppCompatActivity {
     // ── Charger index.html puis injecter le XML ───────────────────────────────
     private void loadHomeAndInject(final String safeXml) {
         onTCSPage = false;
-        // Cacher le bouton flottant RHTime
-        webView.evaluateJavascript(
-            "if(typeof hideRHTimeExportBtn==='function') hideRHTimeExportBtn();", null);
+        // Cacher le bouton natif RHTime
+        rhtimeToken = null;
+        mainHandler.post(() -> {
+            if (btnExportXml != null) btnExportXml.setVisibility(android.view.View.GONE);
+        });
         webView.stopLoading();
         webView.clearHistory();
         webView.loadUrl("file:///android_asset/index.html");
@@ -178,31 +182,34 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 // Bouton flottant : extraire le token de session RHTime depuis l'URL
+                // Bouton natif : visible sur les pages RHTime avec planning
                 if (url.contains("tcs.eqso.be")) {
                     java.util.regex.Matcher m = java.util.regex.Pattern
                         .compile("/RHTIME_Planning/([^/?]+)", java.util.regex.Pattern.CASE_INSENSITIVE)
                         .matcher(url);
                     if (m.find()) {
-                        final String token = m.group(1);
-                        Log.d(TAG, "RHTime session token: " + token);
-                        // Afficher le bouton flottant avec le token
-                        mainHandler.postDelayed(() ->
-                            view.evaluateJavascript(
-                                "if(typeof showRHTimeExportBtn==='function') showRHTimeExportBtn('" + token + "');",
-                                null), 500);
+                        rhtimeToken = m.group(1);
+                        Log.d(TAG, "RHTime token: " + rhtimeToken);
+                        mainHandler.postDelayed(() -> {
+                            if (btnExportXml != null) {
+                                btnExportXml.setVisibility(android.view.View.VISIBLE);
+                                btnExportXml.setEnabled(true);
+                                btnExportXml.setText("\uD83D\uDCC5  Exporter ce mois");
+                            }
+                        }, 500);
                     } else {
-                        // Page login ou autre → cacher le bouton
-                        mainHandler.post(() ->
-                            view.evaluateJavascript(
-                                "if(typeof hideRHTimeExportBtn==='function') hideRHTimeExportBtn();",
-                                null));
+                        rhtimeToken = null;
+                        mainHandler.post(() -> {
+                            if (btnExportXml != null)
+                                btnExportXml.setVisibility(android.view.View.GONE);
+                        });
                     }
                 } else {
-                    // Page index.html → cacher le bouton
-                    mainHandler.post(() ->
-                        view.evaluateJavascript(
-                            "if(typeof hideRHTimeExportBtn==='function') hideRHTimeExportBtn();",
-                            null));
+                    rhtimeToken = null;
+                    mainHandler.post(() -> {
+                        if (btnExportXml != null)
+                            btnExportXml.setVisibility(android.view.View.GONE);
+                    });
                 }
 
                 // Injecter l'autologin uniquement sur la page de login TCS
@@ -284,6 +291,17 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         webView = findViewById(R.id.webView);
+        btnExportXml = findViewById(R.id.btnExportXml);
+        btnExportXml.setOnClickListener(v -> {
+            if (rhtimeToken == null) return;
+            String url = "https://tcs.eqso.be/RHTime/RHTIME_Planning/"
+                + rhtimeToken + "/export.xml?WD_ACTION_=EXPORTXML&A9";
+            android.webkit.CookieManager cm = android.webkit.CookieManager.getInstance();
+            String cookies = cm.getCookie(url);
+            downloadXmlDirectly(url, cookies != null ? cookies : "");
+            btnExportXml.setEnabled(false);
+            btnExportXml.setText("⏳  Récupération…");
+        });
         setupWebView();
     }
 
@@ -461,16 +479,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @JavascriptInterface
-        public void downloadXmlFromUrl(String url) {
-            // Téléchargement direct de l'URL XML RHTime (comme HttpURLConnection)
-            android.webkit.CookieManager cm = android.webkit.CookieManager.getInstance();
-            String cookies = cm.getCookie(url);
-            final String finalCookies = (cookies != null) ? cookies : "";
-            downloadXmlDirectly(url, finalCookies);
-            // Réinitialiser le bouton après déclenchement (sera fait via loadHomeAndInject)
-        }
-
-        @JavascriptInterface
-        public String getAppVersion() { return "2.3"; }
+        public String getAppVersion() { return "3.3"; }
     }
 }
