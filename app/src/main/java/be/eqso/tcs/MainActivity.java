@@ -65,17 +65,19 @@ public class MainActivity extends AppCompatActivity {
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     // ── File picker ───────────────────────────────────────────────────────────
-    private final ActivityResultLauncher<Intent> filePickerLauncher =
-        registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
-            if (filePathCallback == null) return;
-            Uri[] out = null;
-            if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
-                Uri uri = result.getData().getData();
-                if (uri != null) out = new Uri[]{uri};
-            }
-            filePathCallback.onReceiveValue(out);
-            filePathCallback = null;
-        });
+private ValueCallback<Uri[]> filePathCallback;
+
+private final ActivityResultLauncher<Intent> filePickerLauncher =
+    registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+        if (filePathCallback == null) return;
+        Uri[] out = null;
+        if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
+            Uri uri = result.getData().getData();
+            if (uri != null) out = new Uri[]{uri};
+        }
+        filePathCallback.onReceiveValue(out);
+        filePathCallback = null;
+    });
     private ValueCallback<Uri[]> filePathCallback;
 
     // ── onCreate ─────────────────────────────────────────────────────────────
