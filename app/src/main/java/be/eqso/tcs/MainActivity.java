@@ -164,7 +164,7 @@ public class MainActivity extends AppCompatActivity {
         view.evaluateJavascript(js, result -> {
             Log.d(TAG, "navigateToMonth result: " + result);
             monthNavigated = true;
-            if (""not_found"".equals(result)) {
+            if ("\"not_found\"".equals(result)) {
                 // Fallback : construire l'URL directement avec paramètres mois/année
                 // RHTime accepte parfois ?Mois=X&Annee=Y dans l'URL
                 mainHandler.post(() -> {
