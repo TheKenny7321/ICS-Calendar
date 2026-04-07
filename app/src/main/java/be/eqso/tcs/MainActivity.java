@@ -65,6 +65,8 @@ public class MainActivity extends AppCompatActivity {
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     // ── File picker ───────────────────────────────────────────────────────────
+    private ValueCallback<Uri[]> filePathCallback;
+
     private final ActivityResultLauncher<Intent> filePickerLauncher =
         registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
             if (filePathCallback == null) return;
@@ -76,7 +78,6 @@ public class MainActivity extends AppCompatActivity {
             filePathCallback.onReceiveValue(out);
             filePathCallback = null;
         });
-    private ValueCallback<Uri[]> filePathCallback;
 
     // ── onCreate ─────────────────────────────────────────────────────────────
     @SuppressLint({"SetJavaScriptEnabled","JavascriptInterface"})
