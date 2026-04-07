@@ -48,6 +48,11 @@ public class MainActivity extends AppCompatActivity {
     private long    lastBackPress = 0;
     private String  autoLoginUser = null;
     private String  autoLoginPass = null;
+    // Smart auto-import
+    private int     importMonth   = 0;
+    private int     importYear    = 0;
+    private boolean importActive  = false;
+    private boolean monthNavigated = false; // true = déjà navigué vers le bon mois
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
@@ -88,6 +93,102 @@ public class MainActivity extends AppCompatActivity {
     }
 
     // ── Show / Hide export button ─────────────────────────────────────────────
+    // ── Auto-import flow ─────────────────────────────────────────────────────
+    private void handleAutoImportPageLoaded(WebView view, String url) {
+        if (!importActive) return;
+
+        if (!monthNavigated) {
+            // Étape 1 done → notifier JS, puis naviguer vers le mois voulu
+            view.evaluateJavascript("if(typeof impStep1Done==='function')impStep1Done();", null);
+            Log.d(TAG, "Auto-import: navigating to " + importMonth + "/" + importYear);
+            mainHandler.postDelayed(() -> navigateToMonth(view), 1500);
+        } else {
+            // Étape 2 done → le mois est chargé, déclencher l'export XML
+            view.evaluateJavascript("if(typeof impStep2Done==='function')impStep2Done();", null);
+            Log.d(TAG, "Auto-import: triggering XML export");
+            mainHandler.postDelayed(() -> triggerAutoExport(), 1000);
+        }
+    }
+
+    private void navigateToMonth(WebView view) {
+        if (!importActive) return;
+        int month = importMonth;
+        int year  = importYear;
+
+        // Script JS universel pour changer le mois/année sur RHTime (WinDev)
+        // WinDev utilise généralement des SELECT ou des inputs cachés avec des ids spécifiques
+        String js =
+            "(function(){" +
+            "  var changed=false;" +
+            // Chercher le sélecteur de mois — WinDev utilise souvent data-wdid ou des combos
+            "  var selects=[].slice.call(document.querySelectorAll('select'));" +
+            // Trouver le select qui contient des mois (options 1-12 ou noms de mois)
+            "  var mSel=selects.find(function(s){" +
+            "    var opts=[].slice.call(s.options);" +
+            "    return opts.length>=12&&opts.some(function(o){" +
+            "      var v=parseInt(o.value||o.text);" +
+            "      return v>=1&&v<=12;" +
+            "    });" +
+            "  });" +
+            // Trouver le select de l'année
+            "  var ySel=selects.find(function(s){" +
+            "    var opts=[].slice.call(s.options);" +
+            "    return opts.some(function(o){" +
+            "      var v=parseInt(o.value||o.text);" +
+            "      return v>2020&&v<2030;" +
+            "    });" +
+            "  });" +
+            "  if(mSel){" +
+            "    mSel.value=" + month + ";" +
+            "    if(!mSel.value){" + // si value numérique ne marche pas, essayer par index
+            "      mSel.selectedIndex=" + (month-1) + ";" +
+            "    }" +
+            "    mSel.dispatchEvent(new Event('change',{bubbles:true}));" +
+            "    changed=true;" +
+            "  }" +
+            "  if(ySel){" +
+            "    ySel.value=" + year + ";" +
+            "    ySel.dispatchEvent(new Event('change',{bubbles:true}));" +
+            "    changed=true;" +
+            "  }" +
+            // Chercher et cliquer le bouton "Charger" / "Valider" / "OK"
+            "  var btns=[].slice.call(document.querySelectorAll('button,input[type=button],input[type=submit],[onclick]'));" +
+            "  var loadBtn=btns.find(function(b){" +
+            "    var t=(b.textContent||b.value||b.getAttribute('onclick')||'').toLowerCase();" +
+            "    return t.indexOf('charg')>=0||t.indexOf('valider')>=0||t.indexOf('ok')>=0||t.indexOf('appliquer')>=0;" +
+            "  });" +
+            "  if(loadBtn){setTimeout(function(){loadBtn.click();},300);changed=true;}" +
+            "  return changed?'ok':'not_found';" +
+            "})()";
+
+        view.evaluateJavascript(js, result -> {
+            Log.d(TAG, "navigateToMonth result: " + result);
+            monthNavigated = true;
+            if (""not_found"".equals(result)) {
+                // Fallback : construire l'URL directement avec paramètres mois/année
+                // RHTime accepte parfois ?Mois=X&Annee=Y dans l'URL
+                mainHandler.post(() -> {
+                    String fallbackUrl = "https://tcs.eqso.be/RHTime/RHTIME_Planning/"
+                        + rhtimeToken + "?Mois=" + importMonth + "&Annee=" + importYear;
+                    Log.d(TAG, "Trying fallback URL: " + fallbackUrl);
+                    view.loadUrl(fallbackUrl);
+                });
+            }
+            // onPageFinished se re-déclenchera quand la page du nouveau mois est chargée
+        });
+    }
+
+    private void triggerAutoExport() {
+        if (!importActive || rhtimeToken == null) return;
+        importActive = false;
+        String xmlUrl = "https://tcs.eqso.be/RHTime/RHTIME_Planning/"
+            + rhtimeToken + "/export.xml?WD_ACTION_=EXPORTXML&A9";
+        String cookies = CookieManager.getInstance().getCookie(xmlUrl);
+        downloadXmlDirectly(xmlUrl, cookies != null ? cookies : "");
+        // Notifier JS
+        webView.evaluateJavascript("if(typeof impStep3Done==='function')impStep3Done();", null);
+    }
+
     private void showExportButton() {
         mainHandler.postDelayed(() -> {
             if (btnExportXml != null) {
@@ -235,7 +336,8 @@ public class MainActivity extends AppCompatActivity {
                     if (m.find()) {
                         rhtimeToken = m.group(1);
                         Log.d(TAG, "Token in URL: " + rhtimeToken);
-                        showExportButton();
+                        if (importActive) handleAutoImportPageLoaded(view, url);
+                        else showExportButton();
                     } else {
                         // Token not in URL — search inside page HTML
                         mainHandler.postDelayed(() ->
@@ -250,7 +352,8 @@ public class MainActivity extends AppCompatActivity {
                                     if (!token.isEmpty() && !token.equals("null")) {
                                         rhtimeToken = token;
                                         Log.d(TAG, "Token in HTML: " + token);
-                                        showExportButton();
+                                        if (importActive) handleAutoImportPageLoaded(view, url);
+                                        else showExportButton();
                                     } else {
                                         Log.d(TAG, "No token found on: " + url);
                                         hideExportButton();
@@ -489,6 +592,38 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @JavascriptInterface
-        public String getAppVersion() { return "4.0"; }
+        public void startAutoImport(String user, String pass, int month, int year) {
+            autoLoginUser = user;
+            autoLoginPass = pass;
+            importMonth   = month;
+            importYear    = year;
+            importActive  = true;
+            monthNavigated = false;
+            Log.d(TAG, "startAutoImport " + month + "/" + year);
+            mainHandler.post(() -> {
+                onTCSPage = true;
+                webView.stopLoading();
+                webView.loadUrl("https://tcs.eqso.be/RHTime");
+            });
+        }
+
+        @JavascriptInterface
+        public void cancelAutoImport() {
+            importActive  = false;
+            importMonth   = 0;
+            importYear    = 0;
+            monthNavigated = false;
+            autoLoginUser = null;
+            autoLoginPass = null;
+            mainHandler.post(() -> {
+                onTCSPage = false;
+                webView.stopLoading();
+                webView.clearHistory();
+                webView.loadUrl("file:///android_asset/index.html");
+            });
+        }
+
+        @JavascriptInterface
+        public String getAppVersion() { return "5.0"; }
     }
 }

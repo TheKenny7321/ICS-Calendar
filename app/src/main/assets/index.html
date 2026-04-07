@@ -265,6 +265,40 @@
       background:rgba(6,182,212,.1);border:1px solid rgba(6,182,212,.3);
       border-radius:6px;padding:4px 10px;margin-top:6px}
     .version-ok{font-size:11px;color:var(--ok);margin-top:4px}
+
+    /* ── SMART IMPORT PANEL ── */
+    .import-wizard{display:flex;flex-direction:column;gap:10px}
+    .month-year-row{display:flex;gap:8px}
+    .month-year-row select{flex:1;background:var(--surf2);border:1px solid var(--brd);
+      border-radius:8px;padding:11px 10px;color:var(--text);font-size:13px;
+      outline:none;-webkit-appearance:none;cursor:pointer}
+    .month-year-row select:focus{border-color:var(--bluL)}
+
+    /* Barre de progression import */
+    .import-progress{display:none;flex-direction:column;gap:10px;
+      background:var(--surf2);border:1px solid var(--brd);border-radius:12px;padding:16px}
+    .import-progress.active{display:flex}
+    .imp-step{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px}
+    .imp-step.current{color:var(--text);font-weight:700}
+    .imp-step.done{color:var(--ok)}
+    .imp-step.error{color:var(--err)}
+    .imp-dot{width:8px;height:8px;border-radius:50%;background:var(--brd);flex-shrink:0}
+    .imp-step.current .imp-dot{background:var(--bluL);animation:pulse 1.2s infinite}
+    .imp-step.done .imp-dot{background:var(--ok)}
+    .imp-step.error .imp-dot{background:var(--err)}
+    .imp-bar-bg{background:var(--brd);border-radius:99px;height:5px;overflow:hidden}
+    .imp-bar{height:100%;border-radius:99px;width:0%;transition:width .5s ease;
+      background:linear-gradient(90deg,var(--blue),var(--cyan))}
+
+    /* Modal identifiants rapide */
+    .cred-modal{position:fixed;inset:0;z-index:800;
+      background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center}
+    .cred-modal.open{display:flex}
+    .cred-box{background:var(--surf);border:1px solid var(--brd);border-radius:16px;
+      padding:24px;margin:20px;width:100%;max-width:340px}
+    .cred-box h3{font-size:15px;font-weight:700;margin-bottom:6px}
+    .cred-box p{font-size:11px;color:var(--muted);margin-bottom:16px;line-height:1.6}
+    .cred-box .s-field{margin-bottom:10px}
   </style>
 </head>
 <body>
@@ -300,8 +334,26 @@
     <div class="card active" id="card1" style="margin-top:14px">
       <div class="c-hdr"><div class="step-n">1</div><div class="c-title">Importer le planning</div></div>
       <div id="pane-site">
-        <p class="c-desc">Connectez-vous sur RHTime, naviguez vers votre planning, puis faites <strong>clic long &#8594; Exporter en XML</strong>. L'import se fait automatiquement.</p>
-        <button class="btn btn-blue" onclick="openTCS()">&#127760; Importer depuis RHTime</button>
+        <div class="import-wizard" id="importWizard">
+          <p class="c-desc" style="margin-bottom:4px">S&#233;lectionnez le mois &#224; importer&nbsp;:</p>
+          <div class="month-year-row">
+            <select id="selMonth"><option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option><option value="4" selected>Avril</option><option value="5">Mai</option><option value="6">Juin</option><option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option><option value="10">Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option></select>
+            <select id="selYear" style="flex:0.6"><option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option><option value="2028">2028</option></select>
+          </div>
+          <button class="btn btn-blue" id="btnStartImport" onclick="startSmartImport()">
+            &#127760; Importer depuis RHTime
+          </button>
+        </div>
+
+        <!-- Barre de progression -->
+        <div class="import-progress" id="importProgress">
+          <div class="imp-bar-bg"><div class="imp-bar" id="impBar"></div></div>
+          <div class="imp-step" id="imp1"><div class="imp-dot"></div><span>Connexion &#224; RHTime&#8230;</span></div>
+          <div class="imp-step" id="imp2"><div class="imp-dot"></div><span id="imp2txt">Chargement du planning&#8230;</span></div>
+          <div class="imp-step" id="imp3"><div class="imp-dot"></div><span>Export XML en cours&#8230;</span></div>
+          <button class="btn btn-ghost" id="btnCancelImport" onclick="cancelImport()"
+            style="margin-top:4px;padding:9px">Annuler</button>
+        </div>
       </div>
       <div id="pane-file" class="hidden">
         <p class="c-desc">S&#233;lectionnez un fichier XML RHTime d&#233;j&#224; pr&#233;sent sur votre appareil.</p>
@@ -422,7 +474,7 @@
     <div class="version-row">
       <div>
         <div class="version-info">Version actuelle</div>
-        <div class="version-num" id="versionDisplay">4.0</div>
+        <div class="version-num" id="versionDisplay">5.0</div>
         <div id="updateStatus"></div>
       </div>
       <button id="githubLink" onclick="openExternalUrl('https://github.com/TheKenny7321/ICS-Calendar/releases/latest')"
@@ -931,6 +983,106 @@ function switchTab(mode){
   g("pane-site").classList.toggle("hidden",!s);
   g("pane-file").classList.toggle("hidden",s);
 }
+// ── SMART IMPORT ─────────────────────────────────────────────────
+var _importActive = false;
+var _selectedMonth = 0;
+var _selectedYear  = 0;
+
+function startSmartImport(){
+  var user = localStorage.getItem("tcs_user")||"";
+  var pass = localStorage.getItem("tcs_pass")||"";
+  var auto = localStorage.getItem("tcs_auto")==="1";
+
+  _selectedMonth = parseInt(g("selMonth").value);
+  _selectedYear  = parseInt(g("selYear").value);
+
+  // Si pas d'identifiants → popup
+  if(!user || !pass || !auto){
+    g("quickUser").value = user;
+    g("quickPass").value = pass;
+    g("credModal").classList.add("open");
+    return;
+  }
+  _launchImport(user, pass);
+}
+
+function saveQuickCredentials(){
+  var u = g("quickUser").value.trim();
+  var p = g("quickPass").value;
+  if(!u || !p){ toast("Identifiants incomplets","warn"); return; }
+  localStorage.setItem("tcs_user", u);
+  localStorage.setItem("tcs_pass", p);
+  localStorage.setItem("tcs_auto", "1");
+  // Sync vers settings si ouverts
+  if(g("credUser")) g("credUser").value = u;
+  if(g("credPass")) g("credPass").value = p;
+  if(g("autoLoginToggle")) g("autoLoginToggle").checked = true;
+  closeCredModal();
+  _launchImport(u, p);
+}
+
+function closeCredModal(){
+  g("credModal").classList.remove("open");
+}
+
+function _launchImport(user, pass){
+  _importActive = true;
+  // Afficher la progression
+  g("importWizard").style.display = "none";
+  var prog = g("importProgress");
+  prog.classList.add("active");
+
+  var MOIS_FR2 = ["Janvier","Février","Mars","Avril","Mai","Juin",
+    "Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+  g("imp2txt").textContent = "Chargement de " + MOIS_FR2[_selectedMonth-1] + " " + _selectedYear + "…";
+
+  _setImpStep(1, "current");
+  _setBar(10);
+
+  // Lancer via bridge Android
+  if(window.Android && window.Android.startAutoImport){
+    window.Android.startAutoImport(user, pass, _selectedMonth, _selectedYear);
+  }
+}
+
+function cancelImport(){
+  _importActive = false;
+  _resetImportUI();
+  if(window.Android && window.Android.cancelAutoImport)
+    window.Android.cancelAutoImport();
+}
+
+function _resetImportUI(){
+  g("importWizard").style.display = "";
+  var prog = g("importProgress");
+  prog.classList.remove("active");
+  ["imp1","imp2","imp3"].forEach(function(id){_setImpStep(id.replace("imp",""), "");});
+  _setBar(0);
+}
+
+// Appelées depuis Android pour mettre à jour la progression
+function impStep1Done(){ _setImpStep(1,"done"); _setImpStep(2,"current"); _setBar(40); }
+function impStep2Done(){ _setImpStep(2,"done"); _setImpStep(3,"current"); _setBar(75); }
+function impStep3Done(){ _setImpStep(3,"done"); _setBar(100);
+  setTimeout(function(){ _resetImportUI(); }, 800);
+}
+function impError(msg){
+  _importActive = false;
+  ["imp1","imp2","imp3"].forEach(function(id){
+    var el=g(id); if(el.classList.contains("current")) el.classList.replace("current","error");
+  });
+  toast("Erreur : " + msg, "err", 5000);
+  setTimeout(_resetImportUI, 3000);
+}
+
+function _setImpStep(n, state){
+  var el = g("imp"+n);
+  if(!el) return;
+  el.className = "imp-step" + (state ? " "+state : "");
+}
+function _setBar(pct){ var b=g("impBar"); if(b) b.style.width=pct+"%"; }
+
+// Ancienne fonction openTCS (toujours utilisée par le bouton flottant natif)
 function openTCS(){
   var user=localStorage.getItem("tcs_user")||"";
   var pass=localStorage.getItem("tcs_pass")||"";
@@ -1138,7 +1290,7 @@ function reset(){
 
 
 // ── BOUTON FLOTTANT RHTIME EXPORT ────────────────────────────────
-var APP_VERSION = "4.0";
+var APP_VERSION = "5.0";
 
 function openExternalUrl(url) {
   // Ouvre dans le navigateur système externe (Chrome, Firefox...)
