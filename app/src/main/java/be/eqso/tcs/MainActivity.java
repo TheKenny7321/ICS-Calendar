@@ -203,26 +203,16 @@ public class MainActivity extends AppCompatActivity {
             public void onPageFinished(WebView view, String url) {
                 if (!importActive) return;
                 Log.d(TAG, "Hidden WV page: " + url);
-
                 if (!url.contains("tcs.eqso.be")) return;
 
-                if (!loginDone) {
-                    // Page de login → injecter les credentials
-                    if (!url.contains("RHTIME_Planning")) {
-                        Log.d(TAG, "Hidden WV: injecting autologin");
-                        injectAutologin(view, importMonth > 0 ? autoLoginUser : null,
-                                               importMonth > 0 ? autoLoginPass : null);
-                    } else {
-                        // Login réussi, on est sur le planning
-                        loginDone = true;
-                        extractHiddenToken(view, url);
-                    }
-                } else if (!monthNavDone) {
-                    // Planning du mois courant chargé → naviguer vers le mois voulu
-                    extractHiddenToken(view, url);
+                if (!loginDone && !url.contains("RHTIME_Planning")) {
+                    // Encore sur la page de login → injecter les credentials
+                    Log.d(TAG, "Hidden WV: injecting autologin");
+                    injectAutologin(view, autoLoginUser, autoLoginPass);
                 } else {
-                    // Mois voulu chargé → déclencher export
-                    extractHiddenToken(view, url);
+                    // Sur une page RHTime avec planning (après login ou après navigation mois)
+                    // onHiddenTokenReady gère les états loginDone / monthNavDone
+                    mainHandler.postDelayed(() -> extractHiddenToken(view, url), 500);
                 }
             }
         });
@@ -252,12 +242,12 @@ public class MainActivity extends AppCompatActivity {
                         Log.d(TAG, "Hidden token (HTML): " + token);
                         onHiddenTokenReady(view, url);
                     } else {
-                        // Pas encore de token → attendre le prochain onPageFinished
                         Log.d(TAG, "No token yet on: " + url);
+                        // Réessayer l'autologin seulement si pas encore connecté
                         if (!loginDone) {
-                            // Peut-être la page login, essayer autologin
                             injectAutologin(view, autoLoginUser, autoLoginPass);
                         }
+                        // Si déjà connecté mais pas de token : attendre le prochain onPageFinished
                     }
                 }), 1000);
     }

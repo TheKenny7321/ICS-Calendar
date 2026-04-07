@@ -564,6 +564,30 @@
   </div>
 </div>
 
+
+<!-- MODAL IDENTIFIANTS RAPIDE -->
+<div class="cred-modal" id="credModal">
+  <div class="cred-box">
+    <h3>&#128274; Identifiants requis</h3>
+    <p>Pour l'import automatique, renseignez vos identifiants RHTime. Ils seront sauvegard&#233;s pour la prochaine fois.</p>
+    <div class="s-field">
+      <label class="s-label">Identifiant</label>
+      <input class="s-input" type="text" id="quickUser" placeholder="ex: jdupont"
+        autocorrect="off" autocapitalize="none" spellcheck="false">
+    </div>
+    <div class="s-field" style="margin-top:10px">
+      <label class="s-label">Mot de passe</label>
+      <input class="s-input" type="password" id="quickPass" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;">
+    </div>
+    <button class="btn btn-blue" onclick="saveQuickCredentials()" style="margin-top:14px">
+      &#128640; Connexion et import
+    </button>
+    <button class="btn btn-ghost" onclick="closeCredModal()" style="margin-top:8px">
+      Annuler
+    </button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
