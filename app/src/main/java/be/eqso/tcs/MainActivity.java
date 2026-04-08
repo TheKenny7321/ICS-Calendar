@@ -87,7 +87,8 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         webView      = findViewById(R.id.webView);
-        btnExportXml = findViewById(R.id.btnExportXml);
+        // btnExportXml absent du layout debug
+        btnExportXml = findViewById(R.id.btnExportXml); // peut retourner null en mode debug
 
         // Bouton flottant → export XML depuis la page RHTime visible
         btnExportXml.setOnClickListener(v -> {
