@@ -100,6 +100,7 @@ public class MainActivity extends AppCompatActivity {
             btnExportXml.setText("Recuperation...");
         });
 
+        hiddenWebView = findViewById(R.id.hiddenWebView);
         setupMainWebView();
         setupHiddenWebView();
     }
@@ -189,9 +190,8 @@ public class MainActivity extends AppCompatActivity {
 
     @SuppressLint("SetJavaScriptEnabled")
     private void setupHiddenWebView() {
-        hiddenWebView = new WebView(this);
+        // hiddenWebView est récupéré depuis le layout (visible en mode debug)
         configureWebViewSettings(hiddenWebView);
-        // Partager les cookies avec la WebView principale
         CookieManager.getInstance().setAcceptThirdPartyCookies(hiddenWebView, true);
 
         hiddenWebView.setWebViewClient(new WebViewClient() {
