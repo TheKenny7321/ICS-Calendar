@@ -193,15 +193,22 @@ public class MainActivity extends AppCompatActivity {
             public void onPageFinished(WebView view, String url) {
                 if (!importActive) return;
                 Log.d(TAG, "Hidden WV page: " + url);
+
+                // Toast debug — montre l'URL dans l'app
+                String shortUrl = url.length() > 60 ? url.substring(url.length()-60) : url;
+                mainHandler.post(() -> Toast.makeText(MainActivity.this,
+                    "HWV: " + shortUrl, Toast.LENGTH_LONG).show());
+
                 if (!url.contains("tcs.eqso.be")) return;
 
                 if (!loginDone && !url.contains("RHTIME_Planning")) {
-                    // Encore sur la page de login → injecter les credentials
-                    Log.d(TAG, "Hidden WV: injecting autologin");
+                    mainHandler.post(() -> Toast.makeText(MainActivity.this,
+                        "-> Page login, injection credentials...", Toast.LENGTH_SHORT).show());
                     injectAutologin(view, autoLoginUser, autoLoginPass);
                 } else {
-                    // Sur une page RHTime avec planning (après login ou après navigation mois)
-                    // onHiddenTokenReady gère les états loginDone / monthNavDone
+                    mainHandler.post(() -> Toast.makeText(MainActivity.this,
+                        "-> Planning detecte! loginDone=" + loginDone + " monthNav=" + monthNavDone,
+                        Toast.LENGTH_LONG).show());
                     mainHandler.postDelayed(() -> extractHiddenToken(view, url), 500);
                 }
             }
