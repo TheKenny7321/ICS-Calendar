@@ -87,20 +87,21 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         webView      = findViewById(R.id.webView);
-        // btnExportXml retiré du layout debug — on l'ignore
-
-        // Bouton flottant → export XML depuis la page RHTime visible
-        btnExportXml.setOnClickListener(v -> {
-            if (rhtimeToken == null) return;
-            String xmlUrl = "https://tcs.eqso.be/RHTime/RHTIME_Planning/"
-                + rhtimeToken + "/export.xml?WD_ACTION_=EXPORTXML&A9";
-            String cookies = CookieManager.getInstance().getCookie(xmlUrl);
-            downloadXmlDirectly(xmlUrl, cookies != null ? cookies : "");
-            btnExportXml.setEnabled(false);
-            btnExportXml.setText("Recuperation...");
-        });
-
         hiddenWebView = findViewById(R.id.hiddenWebView);
+
+        // Bouton flottant (absent en mode debug — null check obligatoire)
+        btnExportXml = findViewById(R.id.btnExportXml);
+        if (btnExportXml != null) {
+            btnExportXml.setOnClickListener(v -> {
+                if (rhtimeToken == null) return;
+                String xmlUrl = "https://tcs.eqso.be/RHTime/RHTIME_Planning/"
+                    + rhtimeToken + "/export.xml?WD_ACTION_=EXPORTXML&A9";
+                String cookies = CookieManager.getInstance().getCookie(xmlUrl);
+                downloadXmlDirectly(xmlUrl, cookies != null ? cookies : "");
+                btnExportXml.setEnabled(false);
+                btnExportXml.setText("Recuperation...");
+            });
+        }
         setupMainWebView();
         setupHiddenWebView();
     }
