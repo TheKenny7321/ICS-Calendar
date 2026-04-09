@@ -89,19 +89,8 @@ public class MainActivity extends AppCompatActivity {
         webView      = findViewById(R.id.webView);
         hiddenWebView = findViewById(R.id.hiddenWebView);
 
-        // Bouton flottant (absent en mode debug — null check obligatoire)
-        btnExportXml = findViewById(R.id.btnExportXml);
-        if (btnExportXml != null) {
-            btnExportXml.setOnClickListener(v -> {
-                if (rhtimeToken == null) return;
-                String xmlUrl = "https://tcs.eqso.be/RHTime/RHTIME_Planning/"
-                    + rhtimeToken + "/export.xml?WD_ACTION_=EXPORTXML&A9";
-                String cookies = CookieManager.getInstance().getCookie(xmlUrl);
-                downloadXmlDirectly(xmlUrl, cookies != null ? cookies : "");
-                btnExportXml.setEnabled(false);
-                btnExportXml.setText("Recuperation...");
-            });
-        }
+        // Bouton flottant absent du layout debug — btnExportXml reste null
+        // (tous les accès sont déjà protégés par null checks)
         setupMainWebView();
         setupHiddenWebView();
     }
