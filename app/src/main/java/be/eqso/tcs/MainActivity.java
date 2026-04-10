@@ -306,27 +306,20 @@ public class MainActivity extends AppCompatActivity {
             "  ok=true;" +
             "}" +
             "if(ySel){" +
-            "  var ytarget=String(" + importYear + ");" +
-            "  var yfound=false;" +
+            "  var ytarget=" + importYear + ";" +
+            "  var ybest=0,ybestDiff=9999;" +
             "  [].slice.call(ySel.options).forEach(function(o,i){" +
-            "    if(!yfound&&(o.value===ytarget||o.text.trim()===ytarget)){ySel.selectedIndex=i;yfound=true;}" +
+            "    var txt=(o.text||o.value||'').replace(/[^0-9]/g,'');" +
+            "    var v=parseInt(txt);" +
+            "    if(!isNaN(v)){var d=Math.abs(v-ytarget);if(d<ybestDiff){ybestDiff=d;ybest=i;}}" +
             "  });" +
-            "  if(!yfound){[].slice.call(ySel.options).forEach(function(o,i){" +
-            "    if(!yfound&&o.text.indexOf(ytarget)>=0){ySel.selectedIndex=i;yfound=true;}" +
-            "  });}" +
-            "  if(!yfound){[].slice.call(ySel.options).forEach(function(o,i){" +
-            "    if(!yfound&&parseInt(o.value)===" + importYear + "){ySel.selectedIndex=i;yfound=true;}" +
-            "  });}" +
-            "  if(!yfound&&ySel.options.length>0){" +
-            "    var best=0,bestDiff=9999;" +
-            "    [].slice.call(ySel.options).forEach(function(o,i){" +
-            "      var v=parseInt(o.value||o.text.replace(/[^0-9]/g,''));" +
-            "      if(!isNaN(v)){var d=Math.abs(v-" + importYear + ");if(d<bestDiff){bestDiff=d;best=i;}}" +
-            "    });" +
-            "    ySel.selectedIndex=best;" +
-            "  }" +
-            "  ySel.dispatchEvent(new Event('change',{bubbles:true}));" +
-            "  Android.showToast('Annee sel: '+ySel.options[ySel.selectedIndex].text);" +
+            "  ySel.selectedIndex=ybest;" +
+            "  ['mousedown','mouseup','click','input','change'].forEach(function(ev){" +
+            "    ySel.dispatchEvent(new Event(ev,{bubbles:true,cancelable:true}));" +
+            "  });" +
+            "  var selOpt=ySel.options[ybest];" +
+            "  if(selOpt)selOpt.dispatchEvent(new Event('click',{bubbles:true}));" +
+            "  Android.showToast('Annee: '+ySel.options[ybest].text+' (idx '+ybest+')');" +
             "  ok=true;" +
             "}" +
 
@@ -365,22 +358,36 @@ public class MainActivity extends AppCompatActivity {
 
     private void triggerHiddenExport() {
         if (hiddenToken == null) return;
-        importActive = false;
-        // URL d'export — toujours via RHTIME_Planning avec le token
-        final String xmlUrl = "https://tcs.eqso.be/RHTime/RHTIME_Planning/"
-            + hiddenToken + "/export.xml?WD_ACTION_=EXPORTXML&A9";
-        // Utiliser les cookies de l'URL exacte (comme le bouton flottant qui fonctionnait)
-        String c1 = CookieManager.getInstance().getCookie(xmlUrl);
-        String c2 = CookieManager.getInstance().getCookie("https://tcs.eqso.be/RHTime");
-        String c3 = CookieManager.getInstance().getCookie("https://tcs.eqso.be");
-        // Prendre le plus complet
-        final String cookies = c1 != null ? c1 : (c2 != null ? c2 : (c3 != null ? c3 : ""));
-        Log.d(TAG, "Export URL: " + xmlUrl);
-        Log.d(TAG, "Cookies len: " + cookies.length());
+        // Étape intermédiaire : charger RHTIME_Planning dans la hidden WebView
+        // pour établir la session sur ce chemin avant de télécharger le XML
+        final String planningUrl = "https://tcs.eqso.be/RHTime/RHTIME_Planning/" + hiddenToken;
+        final String xmlUrl = planningUrl + "/export.xml?WD_ACTION_=EXPORTXML&A9";
+
+        Log.d(TAG, "Loading planning page before export: " + planningUrl);
         mainHandler.post(() -> Toast.makeText(MainActivity.this,
-            "Export cookies: " + cookies.length() + " chars", Toast.LENGTH_SHORT).show());
-        notifyJS("impStep3Done");
-        downloadXmlDirectly(xmlUrl, cookies);
+            "Chargement page planning...", Toast.LENGTH_SHORT).show());
+
+        // Remplacer le WebViewClient de la hidden WebView pour intercepter ce chargement
+        hiddenWebView.setWebViewClient(new WebViewClient() {
+            @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) { return false; }
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                Log.d(TAG, "Planning page loaded: " + url);
+                // Page chargée → maintenant télécharger le XML avec les bons cookies
+                mainHandler.postDelayed(() -> {
+                    final String cookies = CookieManager.getInstance().getCookie(planningUrl);
+                    final String fallback = CookieManager.getInstance().getCookie("https://tcs.eqso.be");
+                    final String finalCookies = cookies != null ? cookies : (fallback != null ? fallback : "");
+                    Log.d(TAG, "Exporting XML, cookies: " + finalCookies.length() + " chars");
+                    mainHandler.post(() -> Toast.makeText(MainActivity.this,
+                        "Export XML (" + finalCookies.length() + " cookies)...", Toast.LENGTH_SHORT).show());
+                    importActive = false;
+                    notifyJS("impStep3Done");
+                    downloadXmlDirectly(xmlUrl, finalCookies);
+                }, 2000);
+            }
+        });
+        mainHandler.post(() -> hiddenWebView.loadUrl(planningUrl));
     }
 
     // Notifier le JS de index.html (WebView principale)
