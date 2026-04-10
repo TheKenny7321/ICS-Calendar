@@ -307,6 +307,9 @@ public class MainActivity extends AppCompatActivity {
             "}" +
             "if(ySel){" +
             "  var ytarget=" + importYear + ";" +
+            "  var dbg='opts:'+ySel.options.length+' vals:';" +
+            "  [].slice.call(ySel.options).slice(0,5).forEach(function(o){dbg+=o.value+'|'+o.text+',';});" +
+            "  Android.showToast(dbg);" +
             "  var ybest=0,ybestDiff=9999;" +
             "  [].slice.call(ySel.options).forEach(function(o,i){" +
             "    var txt=(o.text||o.value||'').replace(/[^0-9]/g,'');" +
@@ -319,7 +322,7 @@ public class MainActivity extends AppCompatActivity {
             "  });" +
             "  var selOpt=ySel.options[ybest];" +
             "  if(selOpt)selOpt.dispatchEvent(new Event('click',{bubbles:true}));" +
-            "  Android.showToast('Annee: '+ySel.options[ybest].text+' (idx '+ybest+')');" +
+            "  Android.showToast('Annee sel: '+ySel.options[ybest].text+' (idx '+ybest+')');" +
             "  ok=true;" +
             "}" +
 
@@ -358,36 +361,27 @@ public class MainActivity extends AppCompatActivity {
 
     private void triggerHiddenExport() {
         if (hiddenToken == null) return;
-        // Étape intermédiaire : charger RHTIME_Planning dans la hidden WebView
-        // pour établir la session sur ce chemin avant de télécharger le XML
-        final String planningUrl = "https://tcs.eqso.be/RHTime/RHTIME_Planning/" + hiddenToken;
-        final String xmlUrl = planningUrl + "/export.xml?WD_ACTION_=EXPORTXML&A9";
+        importActive = false;
+        notifyJS("impStep3Done");
 
-        Log.d(TAG, "Loading planning page before export: " + planningUrl);
+        final String xmlUrl = "https://tcs.eqso.be/RHTime/RHTIME_Planning/"
+            + hiddenToken + "/export.xml?WD_ACTION_=EXPORTXML&A9";
+
+        Log.d(TAG, "Triggering export via hidden WebView: " + xmlUrl);
         mainHandler.post(() -> Toast.makeText(MainActivity.this,
-            "Chargement page planning...", Toast.LENGTH_SHORT).show());
+            "Export via WebView...", Toast.LENGTH_SHORT).show());
 
-        // Remplacer le WebViewClient de la hidden WebView pour intercepter ce chargement
-        hiddenWebView.setWebViewClient(new WebViewClient() {
-            @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) { return false; }
-            @Override
-            public void onPageFinished(WebView view, String url) {
-                Log.d(TAG, "Planning page loaded: " + url);
-                // Page chargée → maintenant télécharger le XML avec les bons cookies
-                mainHandler.postDelayed(() -> {
-                    final String cookies = CookieManager.getInstance().getCookie(planningUrl);
-                    final String fallback = CookieManager.getInstance().getCookie("https://tcs.eqso.be");
-                    final String finalCookies = cookies != null ? cookies : (fallback != null ? fallback : "");
-                    Log.d(TAG, "Exporting XML, cookies: " + finalCookies.length() + " chars");
-                    mainHandler.post(() -> Toast.makeText(MainActivity.this,
-                        "Export XML (" + finalCookies.length() + " cookies)...", Toast.LENGTH_SHORT).show());
-                    importActive = false;
-                    notifyJS("impStep3Done");
-                    downloadXmlDirectly(xmlUrl, finalCookies);
-                }, 2000);
-            }
+        // Utiliser le DownloadListener de la hidden WebView — même mécanisme que le bouton flottant
+        mainHandler.post(() -> {
+            hiddenWebView.setDownloadListener((url, userAgent, contentDisposition, mimeType, contentLength) -> {
+                Log.d(TAG, "Download intercepted: " + url + " mime=" + mimeType);
+                String cookies = CookieManager.getInstance().getCookie(url);
+                if (cookies == null) cookies = CookieManager.getInstance().getCookie("https://tcs.eqso.be");
+                downloadXmlDirectly(url, cookies != null ? cookies : "");
+            });
+            // Charger l'URL d'export dans la hidden WebView — elle déclenchera le téléchargement
+            hiddenWebView.loadUrl(xmlUrl);
         });
-        mainHandler.post(() -> hiddenWebView.loadUrl(planningUrl));
     }
 
     // Notifier le JS de index.html (WebView principale)
