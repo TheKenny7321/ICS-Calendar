@@ -306,22 +306,27 @@ public class MainActivity extends AppCompatActivity {
             "  ok=true;" +
             "}" +
             "if(ySel){" +
-            "  var ytarget=" + importYear + ";" +
+            "  var ytarget=String(" + importYear + ");" +
             "  var yfound=false;" +
             "  [].slice.call(ySel.options).forEach(function(o,i){" +
-            "    var v=parseInt(o.value||o.text);" +
-            "    var t=o.text||o.value||'';" +
-            "    if(v===ytarget||t.indexOf(String(ytarget))>=0){ySel.selectedIndex=i;yfound=true;}" +
+            "    if(!yfound&&(o.value===ytarget||o.text.trim()===ytarget)){ySel.selectedIndex=i;yfound=true;}" +
             "  });" +
+            "  if(!yfound){[].slice.call(ySel.options).forEach(function(o,i){" +
+            "    if(!yfound&&o.text.indexOf(ytarget)>=0){ySel.selectedIndex=i;yfound=true;}" +
+            "  });}" +
+            "  if(!yfound){[].slice.call(ySel.options).forEach(function(o,i){" +
+            "    if(!yfound&&parseInt(o.value)===" + importYear + "){ySel.selectedIndex=i;yfound=true;}" +
+            "  });}" +
             "  if(!yfound&&ySel.options.length>0){" +
-            "    var best=-1,bestDiff=9999;" +
+            "    var best=0,bestDiff=9999;" +
             "    [].slice.call(ySel.options).forEach(function(o,i){" +
-            "      var v=parseInt(o.value||o.text);" +
-            "      if(!isNaN(v)&&Math.abs(v-ytarget)<bestDiff){bestDiff=Math.abs(v-ytarget);best=i;}" +
+            "      var v=parseInt(o.value||o.text.replace(/[^0-9]/g,''));" +
+            "      if(!isNaN(v)){var d=Math.abs(v-" + importYear + ");if(d<bestDiff){bestDiff=d;best=i;}}" +
             "    });" +
-            "    if(best>=0)ySel.selectedIndex=best;" +
+            "    ySel.selectedIndex=best;" +
             "  }" +
             "  ySel.dispatchEvent(new Event('change',{bubbles:true}));" +
+            "  Android.showToast('Annee sel: '+ySel.options[ySel.selectedIndex].text);" +
             "  ok=true;" +
             "}" +
 
@@ -338,6 +343,8 @@ public class MainActivity extends AppCompatActivity {
 
         view.evaluateJavascript(js, result -> {
             Log.d(TAG, "navigateToMonth JS result: " + result);
+            mainHandler.post(() -> Toast.makeText(MainActivity.this,
+                "Nav result: " + result, Toast.LENGTH_LONG).show());
             if ("\"not_found\"".equals(result)) {
                 String fallback = "https://tcs.eqso.be/RHTime/RHTIME_Planning/"
                     + hiddenToken + "?Mois=" + importMonth + "&Annee=" + importYear;
@@ -362,12 +369,18 @@ public class MainActivity extends AppCompatActivity {
         // URL d'export — toujours via RHTIME_Planning avec le token
         final String xmlUrl = "https://tcs.eqso.be/RHTime/RHTIME_Planning/"
             + hiddenToken + "/export.xml?WD_ACTION_=EXPORTXML&A9";
-        final String cookies = CookieManager.getInstance().getCookie("https://tcs.eqso.be");
+        // Utiliser les cookies de l'URL exacte (comme le bouton flottant qui fonctionnait)
+        String c1 = CookieManager.getInstance().getCookie(xmlUrl);
+        String c2 = CookieManager.getInstance().getCookie("https://tcs.eqso.be/RHTime");
+        String c3 = CookieManager.getInstance().getCookie("https://tcs.eqso.be");
+        // Prendre le plus complet
+        final String cookies = c1 != null ? c1 : (c2 != null ? c2 : (c3 != null ? c3 : ""));
         Log.d(TAG, "Export URL: " + xmlUrl);
+        Log.d(TAG, "Cookies len: " + cookies.length());
         mainHandler.post(() -> Toast.makeText(MainActivity.this,
-            "Export: " + xmlUrl.substring(Math.min(xmlUrl.length(), 40)), Toast.LENGTH_LONG).show());
+            "Export cookies: " + cookies.length() + " chars", Toast.LENGTH_SHORT).show());
         notifyJS("impStep3Done");
-        downloadXmlDirectly(xmlUrl, cookies != null ? cookies : "");
+        downloadXmlDirectly(xmlUrl, cookies);
     }
 
     // Notifier le JS de index.html (WebView principale)
