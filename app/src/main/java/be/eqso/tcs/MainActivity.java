@@ -359,23 +359,10 @@ public class MainActivity extends AppCompatActivity {
     private void triggerHiddenExport() {
         if (hiddenToken == null) return;
         importActive = false;
-        // Essayer d'abord avec RHTIME_Planning, puis avec Page_Identification
-        // car le token peut venir de l'un ou l'autre chemin
-        String base = "https://tcs.eqso.be/RHTime/";
-        String exportSuffix = "/export.xml?WD_ACTION_=EXPORTXML&A9";
-        // Construire l'URL depuis l'URL courante de la hidden WebView
-        String currentUrl = hiddenWebView.getUrl();
-        String xmlUrl;
-        if (currentUrl != null && currentUrl.contains("/Page_Identification/")) {
-            // Remplacer Page_Identification par RHTIME_Planning pour l'export
-            xmlUrl = currentUrl.replaceAll("/Page_Identification/[^/?]+", 
-                "/RHTIME_Planning/" + hiddenToken) + exportSuffix;
-            // Simplifier : utiliser directement le chemin export connu
-            xmlUrl = base + "RHTIME_Planning/" + hiddenToken + exportSuffix;
-        } else {
-            xmlUrl = base + "RHTIME_Planning/" + hiddenToken + exportSuffix;
-        }
-        String cookies = CookieManager.getInstance().getCookie("https://tcs.eqso.be");
+        // URL d'export — toujours via RHTIME_Planning avec le token
+        final String xmlUrl = "https://tcs.eqso.be/RHTime/RHTIME_Planning/"
+            + hiddenToken + "/export.xml?WD_ACTION_=EXPORTXML&A9";
+        final String cookies = CookieManager.getInstance().getCookie("https://tcs.eqso.be");
         Log.d(TAG, "Export URL: " + xmlUrl);
         mainHandler.post(() -> Toast.makeText(MainActivity.this,
             "Export: " + xmlUrl.substring(Math.min(xmlUrl.length(), 40)), Toast.LENGTH_LONG).show());
