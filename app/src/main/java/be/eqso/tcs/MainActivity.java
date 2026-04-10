@@ -140,7 +140,7 @@ public class MainActivity extends AppCompatActivity {
                 // Bouton flottant : token dans l'URL ou dans le HTML
                 if (url.contains("tcs.eqso.be")) {
                     Matcher m = Pattern
-                        .compile("/RHTIME_Planning/([^/?&#]+)", Pattern.CASE_INSENSITIVE)
+                        .compile("/(?:RHTIME_Planning|Page_Identification)/([^/?&#]+)", Pattern.CASE_INSENSITIVE)
                         .matcher(url);
                     if (m.find()) {
                         rhtimeToken = m.group(1);
@@ -149,7 +149,7 @@ public class MainActivity extends AppCompatActivity {
                         mainHandler.postDelayed(() ->
                             view.evaluateJavascript(
                                 "(function(){var h=document.documentElement.innerHTML||'';" +
-                                "var m=h.match(/\\/RHTIME_Planning\\/([A-Za-z0-9_\\-]{8,})/i);" +
+                                "var m=h.match(/\\/(?:RHTIME_Planning|Page_Identification)\\/([A-Za-z0-9_\\-]{8,})/i);" +
                                 "return m?m[1]:'';})() ",
                                 result -> {
                                     String token = result.replace("\"","").trim();
@@ -201,7 +201,8 @@ public class MainActivity extends AppCompatActivity {
 
                 if (!url.contains("tcs.eqso.be")) return;
 
-                if (!loginDone && !url.contains("RHTIME_Planning")) {
+                boolean isLoginPage = !url.contains("RHTIME_Planning") && !url.contains("Page_Identification");
+                if (!loginDone && isLoginPage) {
                     mainHandler.post(() -> Toast.makeText(MainActivity.this,
                         "-> Page login, injection credentials...", Toast.LENGTH_SHORT).show());
                     injectAutologin(view, autoLoginUser, autoLoginPass);
@@ -217,8 +218,9 @@ public class MainActivity extends AppCompatActivity {
 
     private void extractHiddenToken(WebView view, String url) {
         // Essai dans l'URL
+        // Chercher le token dans RHTIME_Planning OU Page_Identification
         Matcher m = Pattern
-            .compile("/RHTIME_Planning/([^/?&#]+)", Pattern.CASE_INSENSITIVE)
+            .compile("/(?:RHTIME_Planning|Page_Identification)/([^/?&#]+)", Pattern.CASE_INSENSITIVE)
             .matcher(url);
         if (m.find()) {
             hiddenToken = m.group(1);
@@ -230,7 +232,7 @@ public class MainActivity extends AppCompatActivity {
         mainHandler.postDelayed(() ->
             view.evaluateJavascript(
                 "(function(){var h=document.documentElement.innerHTML||'';" +
-                "var m=h.match(/\\/RHTIME_Planning\\/([A-Za-z0-9_\\-]{8,})/i);" +
+                "var m=h.match(/\\/(?:RHTIME_Planning|Page_Identification)\\/([A-Za-z0-9_\\-]{8,})/i);" +
                 "return m?m[1]:'';})() ",
                 result -> {
                     String token = result.replace("\"","").trim();
