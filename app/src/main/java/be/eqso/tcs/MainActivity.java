@@ -307,10 +307,20 @@ public class MainActivity extends AppCompatActivity {
             "}" +
             "if(ySel){" +
             "  var ytarget=" + importYear + ";" +
+            "  var yfound=false;" +
             "  [].slice.call(ySel.options).forEach(function(o,i){" +
-            "    if(parseInt(o.value)===ytarget||o.text.indexOf('" + importYear + "')>=0)" +
-            "      {ySel.selectedIndex=i;}" +
+            "    var v=parseInt(o.value||o.text);" +
+            "    var t=o.text||o.value||'';" +
+            "    if(v===ytarget||t.indexOf(String(ytarget))>=0){ySel.selectedIndex=i;yfound=true;}" +
             "  });" +
+            "  if(!yfound&&ySel.options.length>0){" +
+            "    var best=-1,bestDiff=9999;" +
+            "    [].slice.call(ySel.options).forEach(function(o,i){" +
+            "      var v=parseInt(o.value||o.text);" +
+            "      if(!isNaN(v)&&Math.abs(v-ytarget)<bestDiff){bestDiff=Math.abs(v-ytarget);best=i;}" +
+            "    });" +
+            "    if(best>=0)ySel.selectedIndex=best;" +
+            "  }" +
             "  ySel.dispatchEvent(new Event('change',{bubbles:true}));" +
             "  ok=true;" +
             "}" +
@@ -329,26 +339,48 @@ public class MainActivity extends AppCompatActivity {
         view.evaluateJavascript(js, result -> {
             Log.d(TAG, "navigateToMonth JS result: " + result);
             if ("\"not_found\"".equals(result)) {
-                // Fallback : URL avec paramètres
                 String fallback = "https://tcs.eqso.be/RHTime/RHTIME_Planning/"
                     + hiddenToken + "?Mois=" + importMonth + "&Annee=" + importYear;
                 Log.d(TAG, "Fallback URL: " + fallback);
                 mainHandler.post(() -> hiddenWebView.loadUrl(fallback));
             }
-            // onPageFinished se redéclenchera quand le nouveau mois sera chargé
+            // Timer 10s : déclencher l'export même si onPageFinished ne se déclenche pas
+            mainHandler.postDelayed(() -> {
+                if (importActive && loginDone && !monthNavDone) {
+                    Log.d(TAG, "Timer 10s: forcing step 2 done");
+                    monthNavDone = true;
+                    notifyJS("impStep2Done");
+                    mainHandler.postDelayed(() -> triggerHiddenExport(), 1500);
+                }
+            }, 10000);
         });
     }
 
     private void triggerHiddenExport() {
-        if (!importActive || hiddenToken == null) return;
+        if (hiddenToken == null) return;
         importActive = false;
-        String xmlUrl = "https://tcs.eqso.be/RHTime/RHTIME_Planning/"
-            + hiddenToken + "/export.xml?WD_ACTION_=EXPORTXML&A9";
-        // Utiliser les cookies de la hidden WebView
-        String cookies = CookieManager.getInstance().getCookie(xmlUrl);
-        Log.d(TAG, "Triggering export: " + xmlUrl);
-        downloadXmlDirectly(xmlUrl, cookies != null ? cookies : "");
+        // Essayer d'abord avec RHTIME_Planning, puis avec Page_Identification
+        // car le token peut venir de l'un ou l'autre chemin
+        String base = "https://tcs.eqso.be/RHTime/";
+        String exportSuffix = "/export.xml?WD_ACTION_=EXPORTXML&A9";
+        // Construire l'URL depuis l'URL courante de la hidden WebView
+        String currentUrl = hiddenWebView.getUrl();
+        String xmlUrl;
+        if (currentUrl != null && currentUrl.contains("/Page_Identification/")) {
+            // Remplacer Page_Identification par RHTIME_Planning pour l'export
+            xmlUrl = currentUrl.replaceAll("/Page_Identification/[^/?]+", 
+                "/RHTIME_Planning/" + hiddenToken) + exportSuffix;
+            // Simplifier : utiliser directement le chemin export connu
+            xmlUrl = base + "RHTIME_Planning/" + hiddenToken + exportSuffix;
+        } else {
+            xmlUrl = base + "RHTIME_Planning/" + hiddenToken + exportSuffix;
+        }
+        String cookies = CookieManager.getInstance().getCookie("https://tcs.eqso.be");
+        Log.d(TAG, "Export URL: " + xmlUrl);
+        mainHandler.post(() -> Toast.makeText(MainActivity.this,
+            "Export: " + xmlUrl.substring(Math.min(xmlUrl.length(), 40)), Toast.LENGTH_LONG).show());
         notifyJS("impStep3Done");
+        downloadXmlDirectly(xmlUrl, cookies != null ? cookies : "");
     }
 
     // Notifier le JS de index.html (WebView principale)
