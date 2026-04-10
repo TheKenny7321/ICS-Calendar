@@ -276,7 +276,6 @@ public class MainActivity extends AppCompatActivity {
         String js =
             "(function(){" +
             "var selects=[].slice.call(document.querySelectorAll('select'));" +
-
             // Chercher le select de mois : options avec valeurs 1-12
             "var mSel=selects.find(function(s){" +
             "  var opts=[].slice.call(s.options);" +
@@ -306,23 +305,23 @@ public class MainActivity extends AppCompatActivity {
             "  ok=true;" +
             "}" +
             "if(ySel){" +
-            "  var ytarget=" + importYear + ";" +
-            "  var dbg='opts:'+ySel.options.length+' vals:';" +
-            "  [].slice.call(ySel.options).slice(0,5).forEach(function(o){dbg+=o.value+'|'+o.text+',';});" +
-            "  Android.showToast(dbg);" +
-            "  var ybest=0,ybestDiff=9999;" +
+            "  var ytarget=String(" + importYear + ");" +
+            "  var yfound=false;" +
             "  [].slice.call(ySel.options).forEach(function(o,i){" +
-            "    var txt=(o.text||o.value||'').replace(/[^0-9]/g,'');" +
-            "    var v=parseInt(txt);" +
-            "    if(!isNaN(v)){var d=Math.abs(v-ytarget);if(d<ybestDiff){ybestDiff=d;ybest=i;}}" +
+            "    var mem=o.getAttribute('data-wb-valmem')||o.text.trim();" +
+            "    if(mem===ytarget){ySel.selectedIndex=i;yfound=true;}" +
             "  });" +
-            "  ySel.selectedIndex=ybest;" +
-            "  ['mousedown','mouseup','click','input','change'].forEach(function(ev){" +
-            "    ySel.dispatchEvent(new Event(ev,{bubbles:true,cancelable:true}));" +
-            "  });" +
-            "  var selOpt=ySel.options[ybest];" +
-            "  if(selOpt)selOpt.dispatchEvent(new Event('click',{bubbles:true}));" +
-            "  Android.showToast('Annee sel: '+ySel.options[ybest].text+' (idx '+ybest+')');" +
+            "  if(!yfound){" +
+            "    var ybest=0,ybestDiff=9999;" +
+            "    [].slice.call(ySel.options).forEach(function(o,i){" +
+            "      var v=parseInt(o.getAttribute('data-wb-valmem')||o.text);" +
+            "      if(!isNaN(v)){var d=Math.abs(v-" + importYear + ");if(d<ybestDiff){ybestDiff=d;ybest=i;}}" +
+            "    });" +
+            "    ySel.selectedIndex=ybest;" +
+            "  }" +
+            "  ySel.dispatchEvent(new Event('change',{bubbles:true}));" +
+            "  ySel.dispatchEvent(new Event('input',{bubbles:true}));" +
+            "  Android.showToast('Annee: '+ySel.options[ySel.selectedIndex].text);" +
             "  ok=true;" +
             "}" +
 
@@ -367,21 +366,28 @@ public class MainActivity extends AppCompatActivity {
         final String xmlUrl = "https://tcs.eqso.be/RHTime/RHTIME_Planning/"
             + hiddenToken + "/export.xml?WD_ACTION_=EXPORTXML&A9";
 
-        Log.d(TAG, "Triggering export via hidden WebView: " + xmlUrl);
+        Log.d(TAG, "Triggering export via fetch() in hidden WebView: " + xmlUrl);
         mainHandler.post(() -> Toast.makeText(MainActivity.this,
-            "Export via WebView...", Toast.LENGTH_SHORT).show());
+            "Export fetch...", Toast.LENGTH_SHORT).show());
 
-        // Utiliser le DownloadListener de la hidden WebView — même mécanisme que le bouton flottant
-        mainHandler.post(() -> {
-            hiddenWebView.setDownloadListener((url, userAgent, contentDisposition, mimeType, contentLength) -> {
-                Log.d(TAG, "Download intercepted: " + url + " mime=" + mimeType);
-                String cookies = CookieManager.getInstance().getCookie(url);
-                if (cookies == null) cookies = CookieManager.getInstance().getCookie("https://tcs.eqso.be");
-                downloadXmlDirectly(url, cookies != null ? cookies : "");
-            });
-            // Charger l'URL d'export dans la hidden WebView — elle déclenchera le téléchargement
-            hiddenWebView.loadUrl(xmlUrl);
-        });
+        // Utiliser fetch() depuis le contexte JS de la hidden WebView
+        // Elle a la session active — fetch hérite des cookies de la WebView
+        String js =
+            "(function(){" +
+            "  fetch('" + xmlUrl + "',{credentials:'include'})" +
+            "  .then(function(r){" +
+            "    if(!r.ok)throw new Error('HTTP '+r.status);" +
+            "    return r.text();" +
+            "  })" +
+            "  .then(function(xml){" +
+            "    Android.onXmlFetched(xml);" +
+            "  })" +
+            "  .catch(function(e){" +
+            "    Android.showToast('Fetch error: '+e.message);" +
+            "  });" +
+            "})()";
+
+        mainHandler.post(() -> hiddenWebView.evaluateJavascript(js, null));
     }
 
     // Notifier le JS de index.html (WebView principale)
@@ -700,6 +706,26 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface
         public void setAutoLoginCredentials(String user, String pass) {
             autoLoginUser = user; autoLoginPass = pass;
+        }
+
+        @JavascriptInterface
+        public void onXmlFetched(String xml) {
+            Log.d(TAG, "XML fetched via JS, length=" + xml.length());
+            mainHandler.post(() -> Toast.makeText(MainActivity.this,
+                "XML recu: " + xml.length() + " chars", Toast.LENGTH_SHORT).show());
+            String trimmed = xml.trim();
+            if (!trimmed.startsWith("<") || trimmed.toLowerCase().startsWith("<!doctype")) {
+                mainHandler.post(() -> {
+                    Toast.makeText(MainActivity.this,
+                        "Non-XML: " + trimmed.substring(0, Math.min(100, trimmed.length())),
+                        Toast.LENGTH_LONG).show();
+                    webView.evaluateJavascript(
+                        "if(typeof impError==='function')impError('Reponse invalide');", null);
+                });
+                return;
+            }
+            final String safe = xml.replace("\\","\\\\").replace("`","\\`").replace("$","\\$");
+            mainHandler.post(() -> loadHomeAndInject(safe));
         }
 
         @JavascriptInterface
