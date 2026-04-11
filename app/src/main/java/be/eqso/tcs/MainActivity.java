@@ -337,12 +337,12 @@ public class MainActivity extends AppCompatActivity {
         String extractJs =
             "(function(){" +
             "  var h=document.documentElement.innerHTML||'';" +
-            "  var m=h.match(/\/RHTIME_Planning\/([A-Za-z0-9_\-]{8,})/i);" +
+            "  var m=h.match(/\\/RHTIME_Planning\\/([A-Za-z0-9_\\-]{8,})/i);" +
             "  return m?m[1]:'';" +
             "})()";
 
         mainHandler.post(() -> hiddenWebView.evaluateJavascript(extractJs, planningToken -> {
-            String pt = planningToken.replace(""","").trim();
+            String pt = planningToken.replace("\"", "").trim();
             // Utiliser le token RHTIME_Planning si trouvé, sinon le token courant
             String token = (!pt.isEmpty() && !pt.equals("null")) ? pt : hiddenToken;
             String xmlUrl = "https://tcs.eqso.be/RHTime/RHTIME_Planning/"
