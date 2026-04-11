@@ -299,12 +299,8 @@ public class MainActivity extends AppCompatActivity {
             "  Android.showToast('Annee: '+ySel.options[ySel.selectedIndex].text);" +
             "  ok=true;" +
             "}" +
-            // ── Bouton Charger ──
-            "var btns=[].slice.call(document.querySelectorAll('button,input[type=button],input[type=submit],[onclick]'));" +
-            "var loadBtn=btns.find(function(b){" +
-            "  var t=(b.textContent||b.value||b.title||'').toLowerCase();" +
-            "  return t.indexOf('charg')>=0||t.indexOf('valid')>=0;" +
-            "});" +
+            // ── Bouton Charger (id=A14 confirmé) ──
+            "var loadBtn=document.getElementById('A14');" +
             "if(loadBtn){setTimeout(function(){loadBtn.click();},600);ok=true;}" +
             "return ok?'ok':'not_found';" +
             "})()";
@@ -327,7 +323,7 @@ public class MainActivity extends AppCompatActivity {
                     notifyJS("impStep2Done");
                     mainHandler.postDelayed(() -> triggerHiddenExport(), 1500);
                 }
-            }, 10000);
+            }, 12000);
         });
     }
 
@@ -341,12 +337,12 @@ public class MainActivity extends AppCompatActivity {
         String extractJs =
             "(function(){" +
             "  var h=document.documentElement.innerHTML||'';" +
-            "  var m=h.match(/\\/RHTIME_Planning\\/([A-Za-z0-9_\\-]{8,})/i);" +
+            "  var m=h.match(/\/RHTIME_Planning\/([A-Za-z0-9_\-]{8,})/i);" +
             "  return m?m[1]:'';" +
             "})()";
 
         mainHandler.post(() -> hiddenWebView.evaluateJavascript(extractJs, planningToken -> {
-            String pt = planningToken.replace("\"", "").trim();
+            String pt = planningToken.replace(""","").trim();
             // Utiliser le token RHTIME_Planning si trouvé, sinon le token courant
             String token = (!pt.isEmpty() && !pt.equals("null")) ? pt : hiddenToken;
             String xmlUrl = "https://tcs.eqso.be/RHTime/RHTIME_Planning/"
