@@ -192,24 +192,12 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 if (!importActive) return;
-                Log.d(TAG, "Hidden WV page: " + url);
-
-                // Toast debug — montre l'URL dans l'app
-                String shortUrl = url.length() > 60 ? url.substring(url.length()-60) : url;
-                mainHandler.post(() -> Toast.makeText(MainActivity.this,
-                    "HWV: " + shortUrl, Toast.LENGTH_LONG).show());
-
                 if (!url.contains("tcs.eqso.be")) return;
 
                 boolean isLoginPage = !url.contains("RHTIME_Planning") && !url.contains("Page_Identification");
                 if (!loginDone && isLoginPage) {
-                    mainHandler.post(() -> Toast.makeText(MainActivity.this,
-                        "-> Page login, injection credentials...", Toast.LENGTH_SHORT).show());
                     injectAutologin(view, autoLoginUser, autoLoginPass);
                 } else {
-                    mainHandler.post(() -> Toast.makeText(MainActivity.this,
-                        "-> Planning detecte! loginDone=" + loginDone + " monthNav=" + monthNavDone,
-                        Toast.LENGTH_LONG).show());
                     mainHandler.postDelayed(() -> extractHiddenToken(view, url), 500);
                 }
             }
@@ -224,7 +212,6 @@ public class MainActivity extends AppCompatActivity {
             .matcher(url);
         if (m.find()) {
             hiddenToken = m.group(1);
-            Log.d(TAG, "Hidden token (URL): " + hiddenToken);
             onHiddenTokenReady(view, url);
             return;
         }
@@ -238,11 +225,8 @@ public class MainActivity extends AppCompatActivity {
                     String token = result.replace("\"","").trim();
                     if (!token.isEmpty() && !token.equals("null")) {
                         hiddenToken = token;
-                        Log.d(TAG, "Hidden token (HTML): " + token);
                         onHiddenTokenReady(view, url);
                     } else {
-                        Log.d(TAG, "No token yet on: " + url);
-                        // Réessayer l'autologin seulement si pas encore connecté
                         if (!loginDone) {
                             injectAutologin(view, autoLoginUser, autoLoginPass);
                         }
@@ -258,13 +242,11 @@ public class MainActivity extends AppCompatActivity {
             // Connexion OK
             loginDone = true;
             notifyJS("impStep1Done");
-            Log.d(TAG, "Step 1 done. Navigating to month " + importMonth + "/" + importYear);
             mainHandler.postDelayed(() -> navigateHiddenToMonth(view), 1500);
         } else if (!monthNavDone) {
             // Mois chargé
             monthNavDone = true;
             notifyJS("impStep2Done");
-            Log.d(TAG, "Step 2 done. Triggering export");
             mainHandler.postDelayed(() -> triggerHiddenExport(), 1500);
         }
     }
@@ -309,19 +291,14 @@ public class MainActivity extends AppCompatActivity {
             "})()";
 
         view.evaluateJavascript(js, result -> {
-            Log.d(TAG, "navigateToMonth JS result: " + result);
-            mainHandler.post(() -> Toast.makeText(MainActivity.this,
-                "Nav result: " + result, Toast.LENGTH_LONG).show());
             if ("\"not_found\"".equals(result)) {
                 String fallback = "https://tcs.eqso.be/RHTime/RHTIME_Planning/"
                     + hiddenToken + "?Mois=" + importMonth + "&Annee=" + importYear;
-                Log.d(TAG, "Fallback URL: " + fallback);
                 mainHandler.post(() -> hiddenWebView.loadUrl(fallback));
             }
             // Timer 10s : déclencher l'export même si onPageFinished ne se déclenche pas
             mainHandler.postDelayed(() -> {
                 if (importActive && loginDone && !monthNavDone) {
-                    Log.d(TAG, "Timer 10s: forcing step 2 done");
                     monthNavDone = true;
                     notifyJS("impStep2Done");
                     mainHandler.postDelayed(() -> triggerHiddenExport(), 1500);
@@ -352,11 +329,7 @@ public class MainActivity extends AppCompatActivity {
                 + token + "/export.xml?WD_ACTION_=EXPORTXML&A9";
             String cookies = CookieManager.getInstance().getCookie(xmlUrl);
             if (cookies == null) cookies = CookieManager.getInstance().getCookie("https://tcs.eqso.be");
-            Log.d(TAG, "Export: token=" + token + " cookies=" + (cookies != null ? cookies.length() : 0));
             final String finalCookies = cookies != null ? cookies : "";
-            mainHandler.post(() -> Toast.makeText(MainActivity.this,
-                "Export token: " + token.substring(0, Math.min(token.length(),12)) + "...",
-                Toast.LENGTH_SHORT).show());
             downloadXmlDirectly(xmlUrl, finalCookies);
         }));
     }
@@ -397,7 +370,7 @@ public class MainActivity extends AppCompatActivity {
             "else{var f=u.closest('form');if(f)setTimeout(function(){f.submit();},500);}}" +
             "setTimeout(fill,800);})()";
         mainHandler.postDelayed(() ->
-            view.evaluateJavascript(js, res -> Log.d(TAG, "Autologin: " + res)), 300);
+            view.evaluateJavascript(js, null), 300);
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -407,7 +380,6 @@ public class MainActivity extends AppCompatActivity {
     private void downloadXmlDirectly(final String urlStr, final String cookies) {
         new Thread(() -> {
             try {
-                Log.d(TAG, "Downloading XML: " + urlStr);
                 URL url = new URL(urlStr);
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("GET");
@@ -494,7 +466,7 @@ public class MainActivity extends AppCompatActivity {
                         "showPreview(evs);" +
                         "Android.onXmlLoaded(evs.length);" +
                         "}catch(e){Android.showToast('Erreur: '+e.message);}})();";
-                    webView.evaluateJavascript(js, res -> Log.d(TAG, "Inject: " + res));
+                    webView.evaluateJavascript(js, null);
                 }, 800);
             }
         });
@@ -592,7 +564,6 @@ public class MainActivity extends AppCompatActivity {
             loginDone      = false;
             monthNavDone   = false;
             hiddenToken    = null;
-            Log.d(TAG, "startAutoImport " + month + "/" + year);
             mainHandler.post(() -> {
                 // Charger RHTime dans la WebView CACHÉE — la principale reste sur index.html
                 hiddenWebView.stopLoading();
@@ -681,15 +652,9 @@ public class MainActivity extends AppCompatActivity {
 
         @JavascriptInterface
         public void onXmlFetched(String xml) {
-            Log.d(TAG, "XML fetched via JS, length=" + xml.length());
-            mainHandler.post(() -> Toast.makeText(MainActivity.this,
-                "XML recu: " + xml.length() + " chars", Toast.LENGTH_SHORT).show());
             String trimmed = xml.trim();
             if (!trimmed.startsWith("<") || trimmed.toLowerCase().startsWith("<!doctype")) {
                 mainHandler.post(() -> {
-                    Toast.makeText(MainActivity.this,
-                        "Non-XML: " + trimmed.substring(0, Math.min(100, trimmed.length())),
-                        Toast.LENGTH_LONG).show();
                     webView.evaluateJavascript(
                         "if(typeof impError==='function')impError('Reponse invalide');", null);
                 });
