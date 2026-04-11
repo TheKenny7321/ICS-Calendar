@@ -269,62 +269,84 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void navigateHiddenToMonth(WebView view) {
-        if (!importActive || hiddenToken == null) return;
+private void navigateHiddenToMonth(WebView view) {
+    if (!importActive || hiddenToken == null) return;
 
-        String js =
-            "(function(){" +
-            // ── Étape 1 : Sélectionner le mois (A12) ──
-            "var mSel=document.getElementById('A12');" +
-            "if(!mSel){Android.showToast('A12 introuvable');return 'not_found';}" +
-            "var mTarget=" + importMonth + ";" +
-            "[].slice.call(mSel.options).forEach(function(o,i){" +
-            "  if(parseInt(o.value)===mTarget)mSel.selectedIndex=i;" +
-            "});" +
-            "mSel.dispatchEvent(new Event('change',{bubbles:true}));" +
-            "Android.showToast('Mois selectionne, attente annee...');" +
-            // ── Étape 2 : Attendre puis sélectionner l'année (A13) ──
-            "setTimeout(function(){" +
-            "  var ySel=document.getElementById('A13');" +
-            "  if(!ySel){Android.showToast('A13 introuvable');return;}" +
-            "  var yTarget='" + importYear + "';" +
-            "  [].slice.call(ySel.options).forEach(function(o,i){" +
-            "    if((o.getAttribute('data-wb-valmem')||o.text).trim()===yTarget)" +
-            "      ySel.selectedIndex=i;" +
-            "  });" +
-            "  ySel.dispatchEvent(new Event('change',{bubbles:true}));" +
-            "  Android.showToast('Annee: '+ySel.options[ySel.selectedIndex].text);" +
-            // ── Étape 3 : Attendre puis cliquer Charger (A14) ──
-            "  setTimeout(function(){" +
-            "    var btn=document.getElementById('A14');" +
-            "    if(btn){btn.click();Android.showToast('Clic Charger OK');}" +
-            "    else{Android.showToast('A14 introuvable');}" +
-            "  },1000);" +
-            "},1000);" +
-            "return 'ok';" +
-            "})()";
+    String js =
+        "(function(){" +
 
-        view.evaluateJavascript(js, result -> {
-            Log.d(TAG, "navigateToMonth JS result: " + result);
-            mainHandler.post(() -> Toast.makeText(MainActivity.this,
-                "Nav result: " + result, Toast.LENGTH_LONG).show());
-            if ("\"not_found\"".equals(result)) {
-                String fallback = "https://tcs.eqso.be/RHTime/RHTIME_Planning/"
-                    + hiddenToken + "?Mois=" + importMonth + "&Annee=" + importYear;
-                Log.d(TAG, "Fallback URL: " + fallback);
-                mainHandler.post(() -> hiddenWebView.loadUrl(fallback));
+        "function trigger(el){" +
+        "  ['focus','input','change','blur'].forEach(function(e){" +
+        "    el.dispatchEvent(new Event(e,{bubbles:true}));" +
+        "  });" +
+        "}" +
+
+        // ── STEP 1 : MOIS ──
+        "var mSel=document.getElementById('A12');" +
+        "if(!mSel){Android.showToast('A12 introuvable');return 'not_found';}" +
+        "var mTarget=" + importMonth + ";" +
+        "[].slice.call(mSel.options).forEach(function(o,i){" +
+        "  if(parseInt(o.value)===mTarget)mSel.selectedIndex=i;" +
+        "});" +
+        "trigger(mSel);" +
+        "Android.showToast('Mois OK, attente reload...');" +
+
+        // ── STEP 2 : attendre que A13 soit prêt ──
+        "setTimeout(function(){" +
+
+        "var ySel=document.getElementById('A13');" +
+        "if(!ySel){Android.showToast('A13 introuvable');return;}" +
+
+        "var yTarget='" + importYear + "';" +
+        "[].slice.call(ySel.options).forEach(function(o,i){" +
+        "  if((o.getAttribute('data-wb-valmem')||o.text).trim()===yTarget){" +
+        "    ySel.selectedIndex=i;" +
+        "  }" +
+        "});" +
+
+        "trigger(ySel);" +
+        "Android.showToast('Année OK');" +
+
+        // ── STEP 3 : attendre activation bouton ──
+        "setTimeout(function(){" +
+
+        "var btn=document.getElementById('A14');" +
+        "if(!btn){Android.showToast('A14 introuvable');return;}" +
+
+        // 🔥 FORCER activation
+        "btn.disabled=false;" +
+        "btn.removeAttribute('disabled');" +
+
+        "btn.click();" +
+        "Android.showToast('Clic Charger OK');" +
+
+        "},1200);" +
+
+        "},1500);" +
+
+        "return 'ok';" +
+        "})()";
+
+    view.evaluateJavascript(js, result -> {
+        Log.d(TAG, "navigateToMonth JS result: " + result);
+
+        if ("\"not_found\"".equals(result)) {
+            String fallback = "https://tcs.eqso.be/RHTime/RHTIME_Planning/"
+                + hiddenToken + "?Mois=" + importMonth + "&Annee=" + importYear;
+
+            mainHandler.post(() -> hiddenWebView.loadUrl(fallback));
+        }
+
+        // sécurité
+        mainHandler.postDelayed(() -> {
+            if (importActive && loginDone && !monthNavDone) {
+                monthNavDone = true;
+                notifyJS("impStep2Done");
+                mainHandler.postDelayed(() -> triggerHiddenExport(), 1500);
             }
-            // Timer 10s : déclencher l'export même si onPageFinished ne se déclenche pas
-            mainHandler.postDelayed(() -> {
-                if (importActive && loginDone && !monthNavDone) {
-                    Log.d(TAG, "Timer 10s: forcing step 2 done");
-                    monthNavDone = true;
-                    notifyJS("impStep2Done");
-                    mainHandler.postDelayed(() -> triggerHiddenExport(), 1500);
-                }
-            }, 12000);
-        });
-    }
+        }, 12000);
+    });
+}
 
     private void triggerHiddenExport() {
         if (hiddenToken == null) return;
@@ -336,12 +358,12 @@ public class MainActivity extends AppCompatActivity {
         String extractJs =
             "(function(){" +
             "  var h=document.documentElement.innerHTML||'';" +
-            "  var m=h.match(/\\/RHTIME_Planning\\/([A-Za-z0-9_\\-]{8,})/i);" +
+            "  var m=h.match(/\/RHTIME_Planning\/([A-Za-z0-9_\-]{8,})/i);" +
             "  return m?m[1]:'';" +
             "})()";
 
         mainHandler.post(() -> hiddenWebView.evaluateJavascript(extractJs, planningToken -> {
-            String pt = planningToken.replace("\"", "").trim();
+            String pt = planningToken.replace(""","").trim();
             // Utiliser le token RHTIME_Planning si trouvé, sinon le token courant
             String token = (!pt.isEmpty() && !pt.equals("null")) ? pt : hiddenToken;
             String xmlUrl = "https://tcs.eqso.be/RHTime/RHTIME_Planning/"
