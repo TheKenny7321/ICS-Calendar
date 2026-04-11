@@ -6,30 +6,18 @@
     android:orientation="vertical"
     android:background="#0A0F1E">
 
-    <!-- WebView principale (index.html) — moitié haute -->
+    <!-- WebView principale (index.html) — plein écran -->
     <WebView
         android:id="@+id/webView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1" />
 
-    <!-- Séparateur debug -->
-    <TextView
-        android:id="@+id/debugLabel"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="▼ WebView RHTime (debug)"
-        android:textColor="#FFFFFF"
-        android:textSize="11sp"
-        android:textStyle="bold"
-        android:background="#2563EB"
-        android:padding="6dp" />
-
-    <!-- WebView RHTime — moitié basse -->
+    <!-- WebView RHTime cachée (auto-import arrière-plan) -->
     <WebView
         android:id="@+id/hiddenWebView"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_weight="1" />
+        android:visibility="gone" />
 
 </LinearLayout>
