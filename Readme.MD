@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/version-4.0-blue) ![Android](https://img.shields.io/badge/Android-7.0%2B-green)
+![Version](https://img.shields.io/badge/version-5.0-blue) ![Android](https://img.shields.io/badge/Android-7.0%2B-green)
 
 # ICS-Calendar 📅
 
@@ -9,6 +9,7 @@
 * **Zéro perte de données** : Toutes vos informations (mémos, codes horaires, lieux) sont conservées.
 * **Conversion automatique** : L'application détecte le XML et génère le fichier ICS instantanément.
 * **Flexibilité** : Ajoutez l'événement à votre agenda personnel ou partagez-le avec vos collègues.
+* **Agenda sur mesure** : Ignorez les codes inutiles (congés, vacances…) et renommez les codes bruts en libellés clairs directement dans votre calendrier.
 
 ---
 
@@ -17,36 +18,57 @@
 ### La version 3 introduit des outils puissants dans les **Paramètres** pour nettoyer et organiser votre agenda :
 
 * **🚫 Codes à ignorer** : Ne polluez plus votre calendrier avec des informations inutiles.
-    > *Exemple : Ajoutez "F" ou "VA" à la liste pour que ces journées ne créent pas d'événements vides.*
-* **✏️ Renommage de codes** : Adaptez les codes bruts de RHTime pour qu'ils soient plus explicites.
-    > *Exemple : Transformez automatiquement le code "FOR" en "Formation".*
+    > *Exemple : Ajoutez "F" ou "VA" à la liste pour que ces journées (congés, vacances, etc.) ne créent pas d'événements dans votre agenda.*
+* **✏️ Renommage de codes** : Adaptez les codes bruts de RHTime pour qu'ils soient plus explicites dans votre calendrier.
+    > *Exemple : Transformez automatiquement le code "FOR" en "Formation", ou "NUI" en "Nuit".*
 * **🗓️ Vue Aperçu** : L'application intègre désormais un **mini-calendrier** lors de la conversion. Cela vous permet de valider d'un coup d'œil que toutes vos prestations ont bien été capturées avant l'export final.
-
 * **🔒 Confirmation avant de quitter** : Une sécurité supplémentaire dans le navigateur intégré pour éviter de perdre votre session RHTime par erreur.
 
 ---
 
 ### 🚀 Nouveautés de la version 4
 
-La version 4 marque une évolution majeure en simplifiant encore davantage l’expérience utilisateur et en rendant l’application plus autonome :
+La version 4 marque une évolution majeure en simplifiant encore davantage l'expérience utilisateur et en rendant l'application plus autonome :
 
 * **🔄 Mise à jour simplifiée**
-  * Recevez désormais une **notification automatique** lorsqu’une nouvelle version est disponible.
-  * Les mises à jour peuvent être installées **sans désinstaller l’application existante**.  
+  * Recevez désormais une **notification automatique** lorsqu'une nouvelle version est disponible.
+  * Les mises à jour peuvent être installées **sans désinstaller l'application existante**.
   > *Un gain de temps et une transition fluide vers les nouvelles versions.*
 
 * **📤 Export XML intégré**
-  * Un **bouton d’export dédié** apparaît directement dans votre session RHTime.
-  * Plus besoin de manipulations complexes : l’export de votre horaire se fait en **un seul geste**.  
+  * Un **bouton d'export dédié** apparaît directement dans votre session RHTime.
+  * Plus besoin de manipulations complexes : l'export de votre horaire se fait en **un seul geste**.
   > *Une expérience plus rapide, plus intuitive et sans friction.*
+
+---
+
+### ✨ Nouveautés de la version 5
+
+La version 5 pousse encore plus loin l'automatisation et le confort d'utilisation, en réduisant les frictions dès le premier lancement :
+
+* **💬 Assistant de première connexion**
+  * Lors de la **toute première utilisation**, une **fenêtre contextuelle (pop-up)** invite l'utilisateur à saisir ses identifiants RHTime directement, sans avoir à passer par les paramètres.
+  * Une fois enregistrés, ces identifiants sont réutilisés automatiquement à chaque session.
+  > *Fini la configuration laborieuse : l'application vous guide dès le départ.*
+
+* **📊 Barre de progression**
+  * Une **barre de progression visuelle** accompagne désormais chaque étape du processus de conversion.
+  * Vous savez à tout moment où en est le traitement, de la récupération du XML jusqu'à la génération du fichier ICS.
+  > *Plus de doute sur ce qui se passe en arrière-plan.*
+
+* **📅 Sélection automatique du mois et de l'année**
+  * L'application **détecte et sélectionne automatiquement** le mois et l'année courants lors de l'export depuis RHTime.
+  * Il reste bien sûr possible de **modifier manuellement** la période souhaitée si nécessaire.
+  > *L'export du mois en cours ne demande plus aucune manipulation supplémentaire.*
 
 ---
 
 ### 💡 Améliorations globales
 
 * Interface encore plus fluide et logique
-* Réduction des étapes nécessaires à l’export
+* Réduction des étapes nécessaires à l'export
 * Meilleure intégration avec le navigateur embarqué
+* Prise en main immédiate dès le premier lancement
 
 ---
 
@@ -75,41 +97,23 @@ L'application n'étant pas sur le Play Store, voici la marche à suivre :
 
 L'application facilite la récupération de votre planning via un navigateur intégré.
 
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/be867b80-9c06-4a0a-a835-a1df08100592" width="300">
-</p>
+### Étape 1 : Configuration (obligatoire)
 
-### Étape 1 : Configuration (optionnel mais recommandé)
+Lors du **premier lancement**, un **pop-up** vous invite automatiquement à saisir vos identifiants RHTime. Cette étape est indispensable pour permettre à l'application de se connecter et d'importer votre horaire de manière entièrement automatique.
 
-Pour gagner du temps, allez dans les **Paramètres** de l'application et enregistrez vos identifiants RHTime. L'application vous connectera automatiquement lors de vos prochaines sessions.
-
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/ebc2935a-46a3-4f22-a1e4-c69e13d8ef35" width="300">
-</p>
-
-
+> *Une fois enregistrés, vos identifiants sont réutilisés à chaque session sans aucune intervention de votre part.*
 
 ### Étape 2 : Récupérer l'horaire
 
-1. Lancez la connexion à RHTime depuis l'écran principal de l'application.
-2. Une fois sur votre grille horaire, effectuez un **appui long n'importe où sur l'écran**.
-3. Dans le menu qui s'affiche, sélectionnez **"Exporter en XML"**.
-
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/10235d0c-6b5b-4ee4-89e2-3042710c05fa" width="300">
-</p>
+1. Depuis l'écran principal, sélectionnez le **mois** et l'**année** souhaités — le mois en cours est présélectionné automatiquement.
+2. Appuyez sur **"Importer depuis RHTime"**.
+3. L'application se connecte, récupère et convertit votre horaire de façon entièrement automatique et invisible, une **barre de progression** vous indiquant l'avancement en temps réel.
 
 ### Étape 3 : Conversion et action
 
-Dès que vous avez cliqué sur "Exporter", l'application prend le relais :
-* Elle convertit le flux XML en format standard ICS de manière invisible.
-* Vous arrivez alors sur l'écran final vous proposant :
-    * **Ouverture instantanée** : Pour ajouter les horaires dans votre calendrier système (Google, Outlook, etc.).
-    * **Option de partage** : Pour envoyer le fichier `.ics` via WhatsApp, Email ou le sauvegarder sur votre Cloud.
-
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/df7636f8-eb5f-4d9f-983d-eae920495d7c" width="300">
-</p>
+Dès que vous avez cliqué sur **"Importer depuis RHTime"**, l'application prend le relais et vous arrivez sur l'écran final vous proposant :
+* **Ouverture instantanée** : Pour ajouter les horaires dans votre calendrier système (Google, Outlook, etc.).
+* **Option de partage** : Pour envoyer le fichier `.ics` via WhatsApp, Email ou le sauvegarder sur votre Cloud.
 
 ---
 
@@ -120,10 +124,6 @@ Si vous possédez déjà un fichier `.xml` exporté manuellement de RHTime :
 1. Cliquez sur l'onglet **"Fichier local"** sur l'écran d'accueil.
 2. Sélectionnez votre fichier dans le dossier "Téléchargements".
 3. L'application traitera le fichier exactement comme s'il sortait du navigateur intégré.
-
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/34d4791b-d9c6-4431-8f2c-63aac14d218d" width="300">
-</p>
 
 ---
 
@@ -143,4 +143,4 @@ Contrairement à d'autres convertisseurs basiques, **ICS-Calendar** extrait et r
 
 ---
 
-*Application développée avec l'assistance de [Claude](https://claude.ai) (Anthropic) — de l'idée à l'APK, entièrement par conversation.*
+*Application conçue et développée par Kenny, avec l'aide de [Claude](https://claude.ai) (Anthropic) pour le développement et le débogage.*
