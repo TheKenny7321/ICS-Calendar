@@ -272,34 +272,50 @@ public class MainActivity extends AppCompatActivity {
     private void navigateHiddenToMonth(WebView view) {
         if (!importActive || hiddenToken == null) return;
 
-        // IDs confirmés par inspection de la page RHTime :
-        // A12 = mois (val=1..12), A13 = année (data-wb-valmem=2019..2029)
+        // Méthode générique : scan de tous les <select> et boutons par contenu
+        // (remplace la recherche par IDs fixes A12/A13/A14, moins robuste)
         String js =
             "(function(){" +
-            "var ok=false;" +
-            // ── Mois ──
-            "var mSel=document.getElementById('A12');" +
-            "if(mSel){" +
-            "  var mTarget=" + importMonth + ";" +
-            "  [].slice.call(mSel.options).forEach(function(o,i){" +
-            "    if(parseInt(o.value)===mTarget)mSel.selectedIndex=i;" +
+            "var selects=[].slice.call(document.querySelectorAll('select'));" +
+
+            // Chercher le select de mois : options avec valeurs 1-12
+            "var mSel=selects.find(function(s){" +
+            "  var opts=[].slice.call(s.options);" +
+            "  return opts.length>=12&&opts.some(function(o){" +
+            "    var v=parseInt(o.value);return v>=1&&v<=12;" +
             "  });" +
+            "});" +
+
+            // Chercher le select d'année : options avec valeurs > 2020
+            "var ySel=selects.find(function(s){" +
+            "  var opts=[].slice.call(s.options);" +
+            "  return opts.some(function(o){" +
+            "    var v=parseInt(o.value);return v>2020&&v<2035;" +
+            "  });" +
+            "});" +
+
+            "var ok=false;" +
+            "if(mSel){" +
+            // Essayer par value d'abord, puis par index
+            "  var target=" + importMonth + ";" +
+            "  var found=false;" +
+            "  [].slice.call(mSel.options).forEach(function(o,i){" +
+            "    if(parseInt(o.value)===target){mSel.selectedIndex=i;found=true;}" +
+            "  });" +
+            "  if(!found)mSel.selectedIndex=" + (importMonth-1) + ";" +
             "  mSel.dispatchEvent(new Event('change',{bubbles:true}));" +
             "  ok=true;" +
             "}" +
-            // ── Année ──
-            "var ySel=document.getElementById('A13');" +
             "if(ySel){" +
-            "  var yTarget='" + importYear + "';" +
+            "  var ytarget=" + importYear + ";" +
             "  [].slice.call(ySel.options).forEach(function(o,i){" +
-            "    if((o.getAttribute('data-wb-valmem')||o.text).trim()===yTarget)" +
-            "      ySel.selectedIndex=i;" +
+            "    if(parseInt(o.value)===ytarget||o.text.indexOf('" + importYear + "')>=0)" +
+            "      {ySel.selectedIndex=i;}" +
             "  });" +
             "  ySel.dispatchEvent(new Event('change',{bubbles:true}));" +
-            "  Android.showToast('Annee: '+ySel.options[ySel.selectedIndex].text);" +
             "  ok=true;" +
             "}" +
-			
+
             // Cliquer le bouton Charger / Valider
             "var btns=[].slice.call(document.querySelectorAll('button,input[type=button],input[type=submit],[onclick]'));" +
             "var loadBtn=btns.find(function(b){" +
@@ -310,11 +326,12 @@ public class MainActivity extends AppCompatActivity {
 
             "return ok?'ok':'not_found';" +
             "})()";
-			
+
         view.evaluateJavascript(js, result -> {
             Log.d(TAG, "navigateToMonth JS result: " + result);
+            mainHandler.post(() -> Toast.makeText(MainActivity.this,
+                "Nav result: " + result, Toast.LENGTH_LONG).show());
             if ("\"not_found\"".equals(result)) {
-                // Fallback : URL avec paramètres
                 String fallback = "https://tcs.eqso.be/RHTime/RHTIME_Planning/"
                     + hiddenToken + "?Mois=" + importMonth + "&Annee=" + importYear;
                 Log.d(TAG, "Fallback URL: " + fallback);
