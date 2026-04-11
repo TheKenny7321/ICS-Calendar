@@ -299,6 +299,7 @@ public class MainActivity extends AppCompatActivity {
             "  Android.showToast('Annee: '+ySel.options[ySel.selectedIndex].text);" +
             "  ok=true;" +
             "}" +
+			
             // Cliquer le bouton Charger / Valider
             "var btns=[].slice.call(document.querySelectorAll('button,input[type=button],input[type=submit],[onclick]'));" +
             "var loadBtn=btns.find(function(b){" +
@@ -312,9 +313,8 @@ public class MainActivity extends AppCompatActivity {
 			
         view.evaluateJavascript(js, result -> {
             Log.d(TAG, "navigateToMonth JS result: " + result);
-            mainHandler.post(() -> Toast.makeText(MainActivity.this,
-                "Nav result: " + result, Toast.LENGTH_LONG).show());
             if ("\"not_found\"".equals(result)) {
+                // Fallback : URL avec paramètres
                 String fallback = "https://tcs.eqso.be/RHTime/RHTIME_Planning/"
                     + hiddenToken + "?Mois=" + importMonth + "&Annee=" + importYear;
                 Log.d(TAG, "Fallback URL: " + fallback);
