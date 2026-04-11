@@ -272,24 +272,21 @@ public class MainActivity extends AppCompatActivity {
     private void navigateHiddenToMonth(WebView view) {
         if (!importActive || hiddenToken == null) return;
 
-        // IDs confirmés par inspection de la page RHTime :
-        // A12 = mois (val=1..12), A13 = année (data-wb-valmem=2019..2029)
         String js =
             "(function(){" +
-            "var ok=false;" +
-            // ── Mois ──
+            // ── Étape 1 : Sélectionner le mois (A12) ──
             "var mSel=document.getElementById('A12');" +
-            "if(mSel){" +
-            "  var mTarget=" + importMonth + ";" +
-            "  [].slice.call(mSel.options).forEach(function(o,i){" +
-            "    if(parseInt(o.value)===mTarget)mSel.selectedIndex=i;" +
-            "  });" +
-            "  mSel.dispatchEvent(new Event('change',{bubbles:true}));" +
-            "  ok=true;" +
-            "}" +
-            // ── Année ──
-            "var ySel=document.getElementById('A13');" +
-            "if(ySel){" +
+            "if(!mSel){Android.showToast('A12 introuvable');return 'not_found';}" +
+            "var mTarget=" + importMonth + ";" +
+            "[].slice.call(mSel.options).forEach(function(o,i){" +
+            "  if(parseInt(o.value)===mTarget)mSel.selectedIndex=i;" +
+            "});" +
+            "mSel.dispatchEvent(new Event('change',{bubbles:true}));" +
+            "Android.showToast('Mois selectionne, attente annee...');" +
+            // ── Étape 2 : Attendre puis sélectionner l'année (A13) ──
+            "setTimeout(function(){" +
+            "  var ySel=document.getElementById('A13');" +
+            "  if(!ySel){Android.showToast('A13 introuvable');return;}" +
             "  var yTarget='" + importYear + "';" +
             "  [].slice.call(ySel.options).forEach(function(o,i){" +
             "    if((o.getAttribute('data-wb-valmem')||o.text).trim()===yTarget)" +
@@ -297,8 +294,6 @@ public class MainActivity extends AppCompatActivity {
             "  });" +
             "  ySel.dispatchEvent(new Event('change',{bubbles:true}));" +
             "  Android.showToast('Annee: '+ySel.options[ySel.selectedIndex].text);" +
-            "  ok=true;" +
-            "}" +
             // ── Étape 3 : Attendre puis cliquer Charger (A14) ──
             "  setTimeout(function(){" +
             "    var btn=document.getElementById('A14');" +
@@ -341,12 +336,12 @@ public class MainActivity extends AppCompatActivity {
         String extractJs =
             "(function(){" +
             "  var h=document.documentElement.innerHTML||'';" +
-            "  var m=h.match(/\\/RHTIME_Planning\\/([A-Za-z0-9_-]{8,})/i);" +
+            "  var m=h.match(/\\/RHTIME_Planning\\/([A-Za-z0-9_\\-]{8,})/i);" +
             "  return m?m[1]:'';" +
             "})()";
 
         mainHandler.post(() -> hiddenWebView.evaluateJavascript(extractJs, planningToken -> {
-            String pt = planningToken.replace("\"","").trim();
+            String pt = planningToken.replace("\"", "").trim();
             // Utiliser le token RHTIME_Planning si trouvé, sinon le token courant
             String token = (!pt.isEmpty() && !pt.equals("null")) ? pt : hiddenToken;
             String xmlUrl = "https://tcs.eqso.be/RHTime/RHTIME_Planning/"
