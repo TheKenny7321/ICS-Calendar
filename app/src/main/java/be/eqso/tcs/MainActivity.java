@@ -272,64 +272,39 @@ public class MainActivity extends AppCompatActivity {
     private void navigateHiddenToMonth(WebView view) {
         if (!importActive || hiddenToken == null) return;
 
-        // Méthode générique : scan de tous les <select> et boutons par contenu
-        // (remplace la recherche par IDs fixes A12/A13/A14, moins robuste)
+        // Mois + Année : IDs fixes A12/A13 (méthode A, fiable)
+        // Bouton Charger : scan générique par texte (méthode C, fiable)
         String js =
             "(function(){" +
-            "var selects=[].slice.call(document.querySelectorAll('select'));" +
-
-            // Chercher le select de mois : options avec valeurs 1-12
-            "var mSel=selects.find(function(s){" +
-            "  var opts=[].slice.call(s.options);" +
-            "  return opts.length>=12&&opts.some(function(o){" +
-            "    var v=parseInt(o.value);return v>=1&&v<=12;" +
-            "  });" +
-            "});" +
-
-            // Chercher le select d'année : options avec valeurs > 2020
-            "var ySel=selects.find(function(s){" +
-            "  var opts=[].slice.call(s.options);" +
-            "  return opts.some(function(o){" +
-            "    var v=parseInt(o.value);return v>2020&&v<2035;" +
-            "  });" +
-            "});" +
-
             "var ok=false;" +
+            // ── Mois (id=A12) ──
+            "var mSel=document.getElementById('A12');" +
             "if(mSel){" +
-            // Essayer par value d'abord, puis par index
-            "  var target=" + importMonth + ";" +
-            "  var found=false;" +
+            "  var mTarget=" + importMonth + ";" +
             "  [].slice.call(mSel.options).forEach(function(o,i){" +
-            "    if(parseInt(o.value)===target){mSel.selectedIndex=i;found=true;}" +
+            "    if(parseInt(o.value)===mTarget)mSel.selectedIndex=i;" +
             "  });" +
-            "  if(!found)mSel.selectedIndex=" + (importMonth-1) + ";" +
             "  mSel.dispatchEvent(new Event('change',{bubbles:true}));" +
             "  ok=true;" +
             "}" +
+            // ── Année (id=A13) ──
+            "var ySel=document.getElementById('A13');" +
             "if(ySel){" +
-            "  var yStr='" + importYear + "';" +
-            "  var yNum=" + importYear + ";" +
-            "  var yFound=false;" +
+            "  var yTarget='" + importYear + "';" +
             "  [].slice.call(ySel.options).forEach(function(o,i){" +
-            // 1. correspondance exacte sur o.text (méthode A, la plus fiable)
-            "    if((o.getAttribute('data-wb-valmem')||o.text||'').trim()===yStr)" +
-            "      {ySel.selectedIndex=i;yFound=true;}" +
-            // 2. correspondance sur parseInt(o.value) (méthode C, fallback)
-            "    else if(!yFound&&parseInt(o.value)===yNum)" +
-            "      {ySel.selectedIndex=i;yFound=true;}" +
+            "    if((o.getAttribute('data-wb-valmem')||o.text).trim()===yTarget)" +
+            "      ySel.selectedIndex=i;" +
             "  });" +
             "  ySel.dispatchEvent(new Event('change',{bubbles:true}));" +
             "  ok=true;" +
             "}" +
-
-            // Cliquer le bouton Charger / Valider
+            // ── Bouton Charger : scan générique par texte (méthode C) ──
             "var btns=[].slice.call(document.querySelectorAll('button,input[type=button],input[type=submit],[onclick]'));" +
             "var loadBtn=btns.find(function(b){" +
             "  var t=(b.textContent||b.value||b.title||'').toLowerCase();" +
             "  return t.indexOf('charg')>=0||t.indexOf('valid')>=0||t.indexOf('appl')>=0||t.indexOf('ok')>=0||t.indexOf('go')>=0;" +
             "});" +
             "if(loadBtn){setTimeout(function(){loadBtn.click();},400);ok=true;}" +
-
             "return ok?'ok':'not_found';" +
             "})()";
 
