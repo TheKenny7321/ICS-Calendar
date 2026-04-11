@@ -307,10 +307,16 @@ public class MainActivity extends AppCompatActivity {
             "  ok=true;" +
             "}" +
             "if(ySel){" +
-            "  var ytarget=" + importYear + ";" +
+            "  var yStr='" + importYear + "';" +
+            "  var yNum=" + importYear + ";" +
+            "  var yFound=false;" +
             "  [].slice.call(ySel.options).forEach(function(o,i){" +
-            "    if(parseInt(o.value)===ytarget||o.text.indexOf('" + importYear + "')>=0)" +
-            "      {ySel.selectedIndex=i;}" +
+            // 1. correspondance exacte sur o.text (méthode A, la plus fiable)
+            "    if((o.getAttribute('data-wb-valmem')||o.text||'').trim()===yStr)" +
+            "      {ySel.selectedIndex=i;yFound=true;}" +
+            // 2. correspondance sur parseInt(o.value) (méthode C, fallback)
+            "    else if(!yFound&&parseInt(o.value)===yNum)" +
+            "      {ySel.selectedIndex=i;yFound=true;}" +
             "  });" +
             "  ySel.dispatchEvent(new Event('change',{bubbles:true}));" +
             "  ok=true;" +
