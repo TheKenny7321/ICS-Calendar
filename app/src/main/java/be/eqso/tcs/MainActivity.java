@@ -87,10 +87,19 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         webView      = findViewById(R.id.webView);
-        hiddenWebView = findViewById(R.id.hiddenWebView);
+        btnExportXml = findViewById(R.id.btnExportXml);
 
-        // Bouton flottant absent du layout debug — btnExportXml reste null
-        // (tous les accès sont déjà protégés par null checks)
+        // Bouton flottant → export XML depuis la page RHTime visible
+        btnExportXml.setOnClickListener(v -> {
+            if (rhtimeToken == null) return;
+            String xmlUrl = "https://tcs.eqso.be/RHTime/RHTIME_Planning/"
+                + rhtimeToken + "/export.xml?WD_ACTION_=EXPORTXML&A9";
+            String cookies = CookieManager.getInstance().getCookie(xmlUrl);
+            downloadXmlDirectly(xmlUrl, cookies != null ? cookies : "");
+            btnExportXml.setEnabled(false);
+            btnExportXml.setText("Recuperation...");
+        });
+
         setupMainWebView();
         setupHiddenWebView();
     }
@@ -140,7 +149,7 @@ public class MainActivity extends AppCompatActivity {
                 // Bouton flottant : token dans l'URL ou dans le HTML
                 if (url.contains("tcs.eqso.be")) {
                     Matcher m = Pattern
-                        .compile("/(?:RHTIME_Planning|Page_Identification)/([^/?&#]+)", Pattern.CASE_INSENSITIVE)
+                        .compile("/RHTIME_Planning/([^/?&#]+)", Pattern.CASE_INSENSITIVE)
                         .matcher(url);
                     if (m.find()) {
                         rhtimeToken = m.group(1);
@@ -149,7 +158,7 @@ public class MainActivity extends AppCompatActivity {
                         mainHandler.postDelayed(() ->
                             view.evaluateJavascript(
                                 "(function(){var h=document.documentElement.innerHTML||'';" +
-                                "var m=h.match(/\\/(?:RHTIME_Planning|Page_Identification)\\/([A-Za-z0-9_\\-]{8,})/i);" +
+                                "var m=h.match(/\\/RHTIME_Planning\\/([A-Za-z0-9_\\-]{8,})/i);" +
                                 "return m?m[1]:'';})() ",
                                 result -> {
                                     String token = result.replace("\"","").trim();
@@ -180,8 +189,9 @@ public class MainActivity extends AppCompatActivity {
 
     @SuppressLint("SetJavaScriptEnabled")
     private void setupHiddenWebView() {
-        // hiddenWebView est récupéré depuis le layout (visible en mode debug)
+        hiddenWebView = new WebView(this);
         configureWebViewSettings(hiddenWebView);
+        // Partager les cookies avec la WebView principale
         CookieManager.getInstance().setAcceptThirdPartyCookies(hiddenWebView, true);
 
         hiddenWebView.setWebViewClient(new WebViewClient() {
@@ -193,23 +203,15 @@ public class MainActivity extends AppCompatActivity {
             public void onPageFinished(WebView view, String url) {
                 if (!importActive) return;
                 Log.d(TAG, "Hidden WV page: " + url);
-
-                // Toast debug — montre l'URL dans l'app
-                String shortUrl = url.length() > 60 ? url.substring(url.length()-60) : url;
-                mainHandler.post(() -> Toast.makeText(MainActivity.this,
-                    "HWV: " + shortUrl, Toast.LENGTH_LONG).show());
-
                 if (!url.contains("tcs.eqso.be")) return;
 
-                boolean isLoginPage = !url.contains("RHTIME_Planning") && !url.contains("Page_Identification");
-                if (!loginDone && isLoginPage) {
-                    mainHandler.post(() -> Toast.makeText(MainActivity.this,
-                        "-> Page login, injection credentials...", Toast.LENGTH_SHORT).show());
+                if (!loginDone && !url.contains("RHTIME_Planning")) {
+                    // Encore sur la page de login → injecter les credentials
+                    Log.d(TAG, "Hidden WV: injecting autologin");
                     injectAutologin(view, autoLoginUser, autoLoginPass);
                 } else {
-                    mainHandler.post(() -> Toast.makeText(MainActivity.this,
-                        "-> Planning detecte! loginDone=" + loginDone + " monthNav=" + monthNavDone,
-                        Toast.LENGTH_LONG).show());
+                    // Sur une page RHTime avec planning (après login ou après navigation mois)
+                    // onHiddenTokenReady gère les états loginDone / monthNavDone
                     mainHandler.postDelayed(() -> extractHiddenToken(view, url), 500);
                 }
             }
@@ -218,9 +220,8 @@ public class MainActivity extends AppCompatActivity {
 
     private void extractHiddenToken(WebView view, String url) {
         // Essai dans l'URL
-        // Chercher le token dans RHTIME_Planning OU Page_Identification
         Matcher m = Pattern
-            .compile("/(?:RHTIME_Planning|Page_Identification)/([^/?&#]+)", Pattern.CASE_INSENSITIVE)
+            .compile("/RHTIME_Planning/([^/?&#]+)", Pattern.CASE_INSENSITIVE)
             .matcher(url);
         if (m.find()) {
             hiddenToken = m.group(1);
@@ -232,7 +233,7 @@ public class MainActivity extends AppCompatActivity {
         mainHandler.postDelayed(() ->
             view.evaluateJavascript(
                 "(function(){var h=document.documentElement.innerHTML||'';" +
-                "var m=h.match(/\\/(?:RHTIME_Planning|Page_Identification)\\/([A-Za-z0-9_\\-]{8,})/i);" +
+                "var m=h.match(/\\/RHTIME_Planning\\/([A-Za-z0-9_\\-]{8,})/i);" +
                 "return m?m[1]:'';})() ",
                 result -> {
                     String token = result.replace("\"","").trim();
@@ -272,90 +273,83 @@ public class MainActivity extends AppCompatActivity {
     private void navigateHiddenToMonth(WebView view) {
         if (!importActive || hiddenToken == null) return;
 
-        // IDs confirmés par inspection de la page RHTime :
-        // A12 = mois (val=1..12), A13 = année (data-wb-valmem=2019..2029)
+        // Méthode 1 : injecter JS pour changer le sélecteur de mois ET d'année
         String js =
             "(function(){" +
-            "var ok=false;" +
-            // ── Mois ──
-            "var mSel=document.getElementById('A12');" +
-            "if(mSel){" +
-            "  var mTarget=" + importMonth + ";" +
-            "  [].slice.call(mSel.options).forEach(function(o,i){" +
-            "    if(parseInt(o.value)===mTarget)mSel.selectedIndex=i;" +
+            "var selects=[].slice.call(document.querySelectorAll('select'));" +
+
+            // Chercher le select de mois : options avec valeurs 1-12
+            "var mSel=selects.find(function(s){" +
+            "  var opts=[].slice.call(s.options);" +
+            "  return opts.length>=12&&opts.some(function(o){" +
+            "    var v=parseInt(o.value);return v>=1&&v<=12;" +
             "  });" +
+            "});" +
+
+            // Chercher le select d'année : options avec valeurs > 2020
+            "var ySel=selects.find(function(s){" +
+            "  var opts=[].slice.call(s.options);" +
+            "  return opts.some(function(o){" +
+            "    var v=parseInt(o.value);return v>2020&&v<2035;" +
+            "  });" +
+            "});" +
+
+            "var ok=false;" +
+            "if(mSel){" +
+            // Essayer par value d'abord, puis par index
+            "  var target=" + importMonth + ";" +
+            "  var found=false;" +
+            "  [].slice.call(mSel.options).forEach(function(o,i){" +
+            "    if(parseInt(o.value)===target){mSel.selectedIndex=i;found=true;}" +
+            "  });" +
+            "  if(!found)mSel.selectedIndex=" + (importMonth-1) + ";" +
             "  mSel.dispatchEvent(new Event('change',{bubbles:true}));" +
             "  ok=true;" +
             "}" +
-            // ── Année ──
-            "var ySel=document.getElementById('A13');" +
             "if(ySel){" +
-            "  var yTarget='" + importYear + "';" +
+            "  var ytarget=" + importYear + ";" +
             "  [].slice.call(ySel.options).forEach(function(o,i){" +
-            "    if((o.getAttribute('data-wb-valmem')||o.text).trim()===yTarget)" +
-            "      ySel.selectedIndex=i;" +
+            "    if(parseInt(o.value)===ytarget||o.text.indexOf('" + importYear + "')>=0)" +
+            "      {ySel.selectedIndex=i;}" +
             "  });" +
             "  ySel.dispatchEvent(new Event('change',{bubbles:true}));" +
-            "  Android.showToast('Annee: '+ySel.options[ySel.selectedIndex].text);" +
             "  ok=true;" +
             "}" +
-            // ── Bouton Charger (id=A14 confirmé) ──
-            "var loadBtn=document.getElementById('A14');" +
-            "if(loadBtn){setTimeout(function(){loadBtn.click();},600);ok=true;}" +
+
+            // Cliquer le bouton Charger / Valider
+            "var btns=[].slice.call(document.querySelectorAll('button,input[type=button],input[type=submit],[onclick]'));" +
+            "var loadBtn=btns.find(function(b){" +
+            "  var t=(b.textContent||b.value||b.title||'').toLowerCase();" +
+            "  return t.indexOf('charg')>=0||t.indexOf('valid')>=0||t.indexOf('appl')>=0||t.indexOf('ok')>=0||t.indexOf('go')>=0;" +
+            "});" +
+            "if(loadBtn){setTimeout(function(){loadBtn.click();},400);ok=true;}" +
+
             "return ok?'ok':'not_found';" +
             "})()";
 
         view.evaluateJavascript(js, result -> {
             Log.d(TAG, "navigateToMonth JS result: " + result);
-            mainHandler.post(() -> Toast.makeText(MainActivity.this,
-                "Nav result: " + result, Toast.LENGTH_LONG).show());
             if ("\"not_found\"".equals(result)) {
+                // Fallback : URL avec paramètres
                 String fallback = "https://tcs.eqso.be/RHTime/RHTIME_Planning/"
                     + hiddenToken + "?Mois=" + importMonth + "&Annee=" + importYear;
                 Log.d(TAG, "Fallback URL: " + fallback);
                 mainHandler.post(() -> hiddenWebView.loadUrl(fallback));
             }
-            // Timer 10s : déclencher l'export même si onPageFinished ne se déclenche pas
-            mainHandler.postDelayed(() -> {
-                if (importActive && loginDone && !monthNavDone) {
-                    Log.d(TAG, "Timer 10s: forcing step 2 done");
-                    monthNavDone = true;
-                    notifyJS("impStep2Done");
-                    mainHandler.postDelayed(() -> triggerHiddenExport(), 1500);
-                }
-            }, 12000);
+            // onPageFinished se redéclenchera quand le nouveau mois sera chargé
         });
     }
 
     private void triggerHiddenExport() {
-        if (hiddenToken == null) return;
+        if (!importActive || hiddenToken == null) return;
         importActive = false;
+        String xmlUrl = "https://tcs.eqso.be/RHTime/RHTIME_Planning/"
+            + hiddenToken + "/export.xml?WD_ACTION_=EXPORTXML&A9";
+        // Utiliser les cookies de la hidden WebView
+        String cookies = CookieManager.getInstance().getCookie(xmlUrl);
+        Log.d(TAG, "Triggering export: " + xmlUrl);
+        downloadXmlDirectly(xmlUrl, cookies != null ? cookies : "");
         notifyJS("impStep3Done");
-
-        // Extraire le vrai token RHTIME_Planning depuis le HTML de la page courante
-        // (différent du token Page_Identification stocké dans hiddenToken)
-        String extractJs =
-            "(function(){" +
-            "  var h=document.documentElement.innerHTML||'';" +
-            "  var m=h.match(/\\/RHTIME_Planning\\/([A-Za-z0-9_\\-]{8,})/i);" +
-            "  return m?m[1]:'';" +
-            "})()";
-
-        mainHandler.post(() -> hiddenWebView.evaluateJavascript(extractJs, planningToken -> {
-            String pt = planningToken.replace("\"", "").trim();
-            // Utiliser le token RHTIME_Planning si trouvé, sinon le token courant
-            String token = (!pt.isEmpty() && !pt.equals("null")) ? pt : hiddenToken;
-            String xmlUrl = "https://tcs.eqso.be/RHTime/RHTIME_Planning/"
-                + token + "/export.xml?WD_ACTION_=EXPORTXML&A9";
-            String cookies = CookieManager.getInstance().getCookie(xmlUrl);
-            if (cookies == null) cookies = CookieManager.getInstance().getCookie("https://tcs.eqso.be");
-            Log.d(TAG, "Export: token=" + token + " cookies=" + (cookies != null ? cookies.length() : 0));
-            final String finalCookies = cookies != null ? cookies : "";
-            mainHandler.post(() -> Toast.makeText(MainActivity.this,
-                "Export token: " + token.substring(0, Math.min(token.length(),12)) + "...",
-                Toast.LENGTH_SHORT).show());
-            downloadXmlDirectly(xmlUrl, finalCookies);
-        }));
     }
 
     // Notifier le JS de index.html (WebView principale)
@@ -674,26 +668,6 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface
         public void setAutoLoginCredentials(String user, String pass) {
             autoLoginUser = user; autoLoginPass = pass;
-        }
-
-        @JavascriptInterface
-        public void onXmlFetched(String xml) {
-            Log.d(TAG, "XML fetched via JS, length=" + xml.length());
-            mainHandler.post(() -> Toast.makeText(MainActivity.this,
-                "XML recu: " + xml.length() + " chars", Toast.LENGTH_SHORT).show());
-            String trimmed = xml.trim();
-            if (!trimmed.startsWith("<") || trimmed.toLowerCase().startsWith("<!doctype")) {
-                mainHandler.post(() -> {
-                    Toast.makeText(MainActivity.this,
-                        "Non-XML: " + trimmed.substring(0, Math.min(100, trimmed.length())),
-                        Toast.LENGTH_LONG).show();
-                    webView.evaluateJavascript(
-                        "if(typeof impError==='function')impError('Reponse invalide');", null);
-                });
-                return;
-            }
-            final String safe = xml.replace("\\","\\\\").replace("`","\\`").replace("$","\\$");
-            mainHandler.post(() -> loadHomeAndInject(safe));
         }
 
         @JavascriptInterface
