@@ -859,6 +859,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @JavascriptInterface
-        public String getAppVersion() { return "6.0.1"; }
+        public String getAppVersion() { return "6.0.2"; }
     }
 }

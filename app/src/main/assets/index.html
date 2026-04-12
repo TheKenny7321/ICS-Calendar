@@ -256,6 +256,22 @@
     .ev-detail-val{flex:1;line-height:1.5;color:var(--text)}
     .ev-detail-lbl{font-size:9px;color:var(--muted);display:block;
       text-transform:uppercase;letter-spacing:.06em;margin-bottom:1px;font-weight:700}
+    /* Actions dans le popup */
+    .ev-popup-actions{border-top:1px solid var(--brd);padding:12px 16px;
+      display:flex;flex-direction:column;gap:10px}
+    .ev-action-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .ev-action-lbl{font-size:12px;font-weight:600;color:var(--text)}
+    .ev-action-sub{font-size:10px;color:var(--muted);margin-top:1px}
+    .ev-rename-row{display:flex;flex-direction:column;gap:6px}
+    .ev-rename-lbl{font-size:10px;font-weight:700;text-transform:uppercase;
+      letter-spacing:.06em;color:var(--muted)}
+    .ev-rename-wrap{display:flex;gap:8px}
+    .ev-rename-input{flex:1;background:var(--surf2);border:1px solid var(--brd);
+      border-radius:8px;padding:9px 11px;color:var(--text);font-size:13px;
+      outline:none;transition:border-color .2s;-webkit-appearance:none}
+    .ev-rename-input:focus{border-color:var(--bluL)}
+    .ev-rename-save{background:var(--blue);color:#fff;border:none;border-radius:8px;
+      padding:9px 14px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0}
 
     /* ── RAPPEL — show/hide day row ── */
     .reminder-day-row{transition:opacity .2s,max-height .3s;overflow:hidden;max-height:320px}
@@ -453,14 +469,7 @@
         <input class="s-input" type="password" id="credPass" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;"
           autocomplete="current-password">
       </div>
-      <div class="toggle-row">
-        <div>
-          <div class="toggle-lbl">Connexion automatique</div>
-          <div class="toggle-sub">Remplir et soumettre le formulaire</div>
-        </div>
-        <label class="sw"><input type="checkbox" id="autoLoginToggle"><div class="sw-track"></div></label>
-      </div>
-      <div class="s-hint">&#128274; Identifiants stock&#233;s uniquement sur cet appareil.</div>
+      <div class="s-hint">&#128274; Identifiants stock&#233;s uniquement sur cet appareil. La connexion automatique est toujours activ&#233;e.</div>
     </div>
     <button class="btn btn-blue" onclick="saveCredentials()" style="margin-bottom:8px">&#128190; Sauvegarder</button>
     <button class="btn btn-danger" style="margin-bottom:20px" onclick="clearCredentials()">&#128465; Effacer les identifiants</button>
@@ -541,7 +550,7 @@
     <div class="version-row">
       <div>
         <div class="version-info">Version actuelle</div>
-        <div class="version-num" id="versionDisplay">6.0.1</div>
+        <div class="version-num" id="versionDisplay">6.0.2</div>
         <div id="updateStatus"></div>
       </div>
       <button id="githubLink" onclick="openExternalUrl('https://github.com/TheKenny7321/ICS-Calendar/releases/latest')"
@@ -663,6 +672,22 @@
       <button class="btn-x" onclick="closeEventPopup()">&#10005;</button>
     </div>
     <div class="ev-popup-body" id="evPopupBody"></div>
+    <div class="ev-popup-actions" id="evPopupActions" style="display:none">
+      <div class="ev-action-row">
+        <div>
+          <div class="ev-action-lbl">Ignorer ce code</div>
+          <div class="ev-action-sub">Ne pas exporter vers l'agenda</div>
+        </div>
+        <label class="sw"><input type="checkbox" id="evPopupExclToggle" onchange="popupToggleExcluded(this.checked)"><div class="sw-track"></div></label>
+      </div>
+      <div class="ev-rename-row">
+        <div class="ev-rename-lbl">&#127991;&#65039; Nom dans l'agenda</div>
+        <div class="ev-rename-wrap">
+          <input type="text" class="ev-rename-input" id="evPopupRenameInput" placeholder="Travail - CODE">
+          <button class="ev-rename-save" onclick="popupSaveRename()">&#128190;</button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1015,9 +1040,12 @@ newCodeInput.addEventListener('keydown', (e) => handleEnter(e, addCodeManual));
 
 // ── POPUP DÉTAIL ÉVÉNEMENT ────────────────────────────────────────
 var DAY_NAMES=["Dimanche","Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi"];
+var _popupEventCode = null; // code du code actuellement affiché dans le popup
+
 function showEventPopup(idx){
   var ev=events[idx];
   if(!ev)return;
+  _popupEventCode = ev.code;
   var excl=isExcluded(ev.code);
   var codesConfig=loadCodes();
   var cnf=codesConfig.find(function(x){return x.code===ev.code;});
@@ -1030,17 +1058,13 @@ function showEventPopup(idx){
 
   g("evPopupTitle").textContent=ev.code+" \u2014 "+p[0]+"/"+p[1]+"/"+p[2];
   var html="";
-  html+="<div class='ev-popup-status "+(excl?"ignored":"exported")+"'>"
+  html+="<div class='ev-popup-status "+(excl?"ignored":"exported")+"' id='evPopupStatusBadge'>"
     +(excl?"&#9940; Ignor\u00e9 \u2014 non export\u00e9":"&#10003; Export\u00e9 vers l'agenda")+"</div>";
   html+="<div class='ev-detail-row'><div class='ev-detail-ico'>&#128197;</div>"
     +"<div class='ev-detail-val'><span class='ev-detail-lbl'>Date</span>"
     +dayName+" "+p[0]+" "+MOIS[parseInt(p[1])-1]+" "+p[2]+"</div></div>";
   html+="<div class='ev-detail-row'><div class='ev-detail-ico'>&#128203;</div>"
     +"<div class='ev-detail-val'><span class='ev-detail-lbl'>Code horaire</span>"+ev.code+"</div></div>";
-  if(evName!=="Travail - "+ev.code||(cnf&&cnf.name)){
-    html+="<div class='ev-detail-row'><div class='ev-detail-ico'>&#127991;&#65039;</div>"
-      +"<div class='ev-detail-val'><span class='ev-detail-lbl'>Nom dans l'agenda</span>"+evName+"</div></div>";
-  }
   if(deb||fin){
     html+="<div class='ev-detail-row'><div class='ev-detail-ico'>&#128336;</div>"
       +"<div class='ev-detail-val'><span class='ev-detail-lbl'>Horaires</span>"
@@ -1059,9 +1083,49 @@ function showEventPopup(idx){
       +"<div class='ev-detail-val'><span class='ev-detail-lbl'>M\u00e9mo</span>"+ev.memo+"</div></div>";
   }
   g("evPopupBody").innerHTML=html;
+
+  // Zone d'actions
+  var defaultName="Travail - "+ev.code;
+  g("evPopupExclToggle").checked=excl;
+  g("evPopupRenameInput").value=(cnf&&cnf.name)?cnf.name:"";
+  g("evPopupRenameInput").placeholder=defaultName;
+  g("evPopupActions").style.display="";
+
   g("evPopup").classList.add("open");
 }
-function closeEventPopup(){g("evPopup").classList.remove("open");}
+
+function _refreshPopupStatus(){
+  var excl=isExcluded(_popupEventCode);
+  var badge=g("evPopupStatusBadge");
+  if(badge){
+    badge.className="ev-popup-status "+(excl?"ignored":"exported");
+    badge.innerHTML=excl?"&#9940; Ignor\u00e9 \u2014 non export\u00e9":"&#10003; Export\u00e9 vers l'agenda";
+  }
+}
+
+function popupToggleExcluded(val){
+  if(!_popupEventCode)return;
+  var codes=loadCodes();
+  var c=codes.find(function(x){return x.code===_popupEventCode;});
+  if(c){c.excluded=val;saveCodes(codes);}
+  _refreshPopupStatus();
+  if(events.length)showPreview(events);
+}
+
+function popupSaveRename(){
+  if(!_popupEventCode)return;
+  var val=g("evPopupRenameInput").value.trim();
+  var codes=loadCodes();
+  var c=codes.find(function(x){return x.code===_popupEventCode;});
+  if(c){c.name=val;saveCodes(codes);}
+  toast("\u2705 Nom mis \u00e0 jour","ok",1500);
+  if(events.length)showPreview(events);
+}
+function closeEventPopup(){
+  g("evPopup").classList.remove("open");
+  _popupEventCode=null;
+  g("evPopupActions").style.display="none";
+}
 
 // ── RAPPEL CALENDRIER ─────────────────────────────────────────────
 function loadReminderSettings(){
@@ -1103,7 +1167,6 @@ function saveReminderSettings(){
 g("settingsBtn").addEventListener("click",function(){
   g("credUser").value=localStorage.getItem("tcs_user")||"";
   g("credPass").value=localStorage.getItem("tcs_pass")||"";
-  g("autoLoginToggle").checked=localStorage.getItem("tcs_auto")==="1";
   g("confirmExitToggle").checked=localStorage.getItem("tcs_confirm_exit")==="1";
   loadReminderSettings();
   updateCodesNavSub();
@@ -1142,7 +1205,7 @@ function closeSettings(){g("sPanel").classList.remove("open");}
 function saveCredentials(){
   localStorage.setItem("tcs_user",g("credUser").value.trim());
   localStorage.setItem("tcs_pass",g("credPass").value);
-  localStorage.setItem("tcs_auto",g("autoLoginToggle").checked?"1":"0");
+  localStorage.setItem("tcs_auto","1");
   var ce=g("confirmExitToggle").checked;
   localStorage.setItem("tcs_confirm_exit",ce?"1":"0");
   if(window.Android&&window.Android.setConfirmExit)window.Android.setConfirmExit(ce);
@@ -1156,7 +1219,7 @@ g("newRenameCodeInput").addEventListener("keypress", function(e){
 });
 function clearCredentials(){
   localStorage.removeItem("tcs_user");localStorage.removeItem("tcs_pass");localStorage.removeItem("tcs_auto");
-  g("credUser").value="";g("credPass").value="";g("autoLoginToggle").checked=false;
+  g("credUser").value="";g("credPass").value="";
   toast("\ud83d\uddd1\ufe0f Identifiants effac\u00e9s","ok");
 }
 g("confirmExitToggle").addEventListener("change",function(){
@@ -1180,13 +1243,12 @@ var _selectedYear  = 0;
 function startSmartImport(){
   var user = localStorage.getItem("tcs_user")||"";
   var pass = localStorage.getItem("tcs_pass")||"";
-  var auto = localStorage.getItem("tcs_auto")==="1";
 
   _selectedMonth = parseInt(g("selMonth").value);
   _selectedYear  = parseInt(g("selYear").value);
 
   // Si pas d'identifiants → popup
-  if(!user || !pass || !auto){
+  if(!user || !pass){
     g("quickUser").value = user;
     g("quickPass").value = pass;
     g("credModal").classList.add("open");
@@ -1205,7 +1267,6 @@ function saveQuickCredentials(){
   // Sync vers settings si ouverts
   if(g("credUser")) g("credUser").value = u;
   if(g("credPass")) g("credPass").value = p;
-  if(g("autoLoginToggle")) g("autoLoginToggle").checked = true;
   closeCredModal();
   _launchImport(u, p);
 }
@@ -1275,9 +1336,8 @@ function _setBar(pct){ var b=g("impBar"); if(b) b.style.width=pct+"%"; }
 function openTCS(){
   var user=localStorage.getItem("tcs_user")||"";
   var pass=localStorage.getItem("tcs_pass")||"";
-  var auto=localStorage.getItem("tcs_auto")==="1";
   if(window.Android){
-    if(auto&&user&&pass&&window.Android.setAutoLoginCredentials)
+    if(user&&pass&&window.Android.setAutoLoginCredentials)
       window.Android.setAutoLoginCredentials(user,pass);
     window.Android.loadTCSPage();
   }
@@ -1480,7 +1540,7 @@ function reset(){
 
 
 // ── BOUTON FLOTTANT RHTIME EXPORT ────────────────────────────────
-var APP_VERSION = "6.0.1";
+var APP_VERSION = "6.0.2";
 
 function openExternalUrl(url) {
   // Ouvre dans le navigateur système externe (Chrome, Firefox...)
