@@ -602,18 +602,18 @@ public class MainActivity extends AppCompatActivity {
         }
 
         public static void scheduleNext(Context ctx, int targetDay) {
+            SharedPreferences prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+            int h = prefs.getInt("reminder_hour",   9);
+            int m = prefs.getInt("reminder_minute", 0);
+
             java.util.Calendar cal = java.util.Calendar.getInstance();
-            cal.set(java.util.Calendar.HOUR_OF_DAY, 9);
-            cal.set(java.util.Calendar.MINUTE, 0);
-            cal.set(java.util.Calendar.SECOND, 0);
+            cal.set(java.util.Calendar.HOUR_OF_DAY, h);
+            cal.set(java.util.Calendar.MINUTE,      m);
+            cal.set(java.util.Calendar.SECOND,      0);
             cal.set(java.util.Calendar.MILLISECOND, 0);
 
-            // Si le jour cible de ce mois est déjà passé → mois suivant
-            java.util.Calendar now = java.util.Calendar.getInstance();
-            if (now.get(java.util.Calendar.DAY_OF_MONTH) >= targetDay) {
-                cal.add(java.util.Calendar.MONTH, 1);
-            }
-            // Se placer au 1er pour éviter les débordements, puis ajuster
+            // Toujours planifier pour le mois suivant (on vient de se déclencher)
+            cal.add(java.util.Calendar.MONTH, 1);
             cal.set(java.util.Calendar.DAY_OF_MONTH, 1);
             int maxDay = cal.getActualMaximum(java.util.Calendar.DAY_OF_MONTH);
             cal.set(java.util.Calendar.DAY_OF_MONTH, Math.min(targetDay, maxDay));
@@ -760,12 +760,18 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @JavascriptInterface
-        public void setCalendarReminder(boolean enabled, int day) {
+        public void setCalendarReminder(boolean enabled, int day, int hour, int minute) {
+            int h = Math.min(23, Math.max(0, hour));
+            int m = Math.min(59, Math.max(0, minute));
+            int d = Math.min(31, Math.max(1, day));
+
             // Sauvegarder les préférences
             SharedPreferences prefs = getSharedPreferences("tcs_prefs", Context.MODE_PRIVATE);
             prefs.edit()
                 .putBoolean("reminder_enabled", enabled)
-                .putInt("reminder_day", Math.min(31, Math.max(1, day)))
+                .putInt("reminder_day",    d)
+                .putInt("reminder_hour",   h)
+                .putInt("reminder_minute", m)
                 .apply();
 
             AlarmManager am = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
@@ -781,21 +787,25 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
 
-            // Calculer la prochaine occurrence du jour cible
+            // Calculer la prochaine occurrence du jour+heure cibles
             java.util.Calendar cal = java.util.Calendar.getInstance();
-            cal.set(java.util.Calendar.HOUR_OF_DAY, 9);
-            cal.set(java.util.Calendar.MINUTE, 0);
-            cal.set(java.util.Calendar.SECOND, 0);
+            cal.set(java.util.Calendar.HOUR_OF_DAY, h);
+            cal.set(java.util.Calendar.MINUTE,      m);
+            cal.set(java.util.Calendar.SECOND,      0);
             cal.set(java.util.Calendar.MILLISECOND, 0);
 
-            // Si aujourd'hui >= jour cible → mois prochain
-            if (cal.get(java.util.Calendar.DAY_OF_MONTH) >= day) {
-                cal.add(java.util.Calendar.MONTH, 1);
-            }
+            // Si le moment cible de ce mois est déjà passé → mois suivant
+            java.util.Calendar now = java.util.Calendar.getInstance();
+            boolean todayPastTarget =
+                now.get(java.util.Calendar.DAY_OF_MONTH) > d ||
+                (now.get(java.util.Calendar.DAY_OF_MONTH) == d &&
+                 now.getTimeInMillis() >= cal.getTimeInMillis());
+            if (todayPastTarget) cal.add(java.util.Calendar.MONTH, 1);
+
             // Éviter les débordements (ex: 30 en février)
             cal.set(java.util.Calendar.DAY_OF_MONTH, 1);
             int maxDay = cal.getActualMaximum(java.util.Calendar.DAY_OF_MONTH);
-            cal.set(java.util.Calendar.DAY_OF_MONTH, Math.min(day, maxDay));
+            cal.set(java.util.Calendar.DAY_OF_MONTH, Math.min(d, maxDay));
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, cal.getTimeInMillis(), pi);
@@ -803,11 +813,13 @@ public class MainActivity extends AppCompatActivity {
                 am.setExact(AlarmManager.RTC_WAKEUP, cal.getTimeInMillis(), pi);
             }
 
-            // Feedback visuel dans le JS
+            // Toast de confirmation avec date + heure exacte
+            String hh = pad2(cal.get(java.util.Calendar.HOUR_OF_DAY));
+            String mm = pad2(cal.get(java.util.Calendar.MINUTE));
             String dateStr = pad2(cal.get(java.util.Calendar.DAY_OF_MONTH))
                 + "/" + pad2(cal.get(java.util.Calendar.MONTH) + 1)
                 + "/" + cal.get(java.util.Calendar.YEAR);
-            final String msg = "Prochain rappel : " + dateStr + " à 9h00";
+            final String msg = "Prochain rappel : " + dateStr + " à " + hh + "h" + mm;
             mainHandler.post(() ->
                 webView.evaluateJavascript(
                     "toast('" + msg + "','info',4000);", null));

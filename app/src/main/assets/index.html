@@ -258,8 +258,11 @@
       text-transform:uppercase;letter-spacing:.06em;margin-bottom:1px;font-weight:700}
 
     /* ── RAPPEL — show/hide day row ── */
-    .reminder-day-row{transition:opacity .2s,max-height .25s;overflow:hidden;max-height:120px}
+    .reminder-day-row{transition:opacity .2s,max-height .3s;overflow:hidden;max-height:320px}
     .reminder-day-row.hidden-row{opacity:0;max-height:0;pointer-events:none}
+    .reminder-time-row{display:flex;gap:8px;align-items:center}
+    .reminder-time-row .s-input{text-align:center;font-size:16px;font-weight:700;padding:11px 8px}
+    .reminder-time-sep{font-size:20px;font-weight:700;color:var(--text);flex-shrink:0}
 
     /* TOAST */
     .toast{position:fixed;top:16px;left:16px;right:16px;
@@ -502,9 +505,19 @@
           <input class="s-input" type="number" id="reminderDay" min="1" max="31" value="25"
             placeholder="Ex: 25" style="-moz-appearance:textfield">
         </div>
+        <div class="s-field">
+          <label class="s-label">Heure du rappel</label>
+          <div class="reminder-time-row">
+            <input class="s-input" type="number" id="reminderHour" min="0" max="23" value="9"
+              placeholder="9" style="-moz-appearance:textfield;flex:1">
+            <div class="reminder-time-sep">:</div>
+            <input class="s-input" type="number" id="reminderMin" min="0" max="59" value="0"
+              placeholder="00" style="-moz-appearance:textfield;flex:1">
+          </div>
+        </div>
         <div class="s-hint">
-          &#8505;&#65039; Si le mois n'a pas ce jour (ex&nbsp;: le 30 en f&#233;vrier),
-          le rappel se d&#233;clenchera le dernier jour du mois.
+          &#8505;&#65039; Si le mois est plus court que le jour choisi (ex&nbsp;: le&nbsp;30 en f&#233;vrier),
+          le rappel se d&#233;clenchera automatiquement le dernier jour disponible du mois.
         </div>
       </div>
     </div>
@@ -1054,8 +1067,13 @@ function closeEventPopup(){g("evPopup").classList.remove("open");}
 function loadReminderSettings(){
   var enabled=localStorage.getItem("tcs_reminder")==="1";
   var day=parseInt(localStorage.getItem("tcs_reminder_day"))||25;
+  var hour=parseInt(localStorage.getItem("tcs_reminder_hour"));
+  if(isNaN(hour))hour=9;
+  var min=parseInt(localStorage.getItem("tcs_reminder_min"))||0;
   g("reminderToggle").checked=enabled;
   g("reminderDay").value=day;
+  g("reminderHour").value=hour;
+  g("reminderMin").value=min;
   g("reminderDayRow").classList.toggle("hidden-row",!enabled);
 }
 g("reminderToggle").addEventListener("change",function(){
@@ -1064,13 +1082,20 @@ g("reminderToggle").addEventListener("change",function(){
 function saveReminderSettings(){
   var enabled=g("reminderToggle").checked;
   var day=Math.min(31,Math.max(1,parseInt(g("reminderDay").value)||25));
+  var hour=Math.min(23,Math.max(0,parseInt(g("reminderHour").value)||9));
+  var min=Math.min(59,Math.max(0,parseInt(g("reminderMin").value)||0));
   g("reminderDay").value=day;
+  g("reminderHour").value=hour;
+  g("reminderMin").value=min;
   localStorage.setItem("tcs_reminder",enabled?"1":"0");
   localStorage.setItem("tcs_reminder_day",day);
+  localStorage.setItem("tcs_reminder_hour",hour);
+  localStorage.setItem("tcs_reminder_min",min);
   if(window.Android&&window.Android.setCalendarReminder){
-    window.Android.setCalendarReminder(enabled,day);
+    window.Android.setCalendarReminder(enabled,day,hour,min);
   }
-  toast("&#128276; Rappel "+(enabled?"activ\u00e9 pour le "+day+" de chaque mois":"d\u00e9sactiv\u00e9"),
+  var hh=String(hour).padStart(2,"0"),mm=String(min).padStart(2,"0");
+  toast("&#128276; Rappel "+(enabled?"activ\u00e9 \u2014 le "+day+" \u00e0 "+hh+"h"+mm+" chaque mois":"d\u00e9sactiv\u00e9"),
     enabled?"ok":"info");
 }
 
