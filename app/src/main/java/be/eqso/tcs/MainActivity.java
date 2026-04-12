@@ -2,8 +2,17 @@ package be.eqso.tcs;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.AlarmManager;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -93,6 +102,19 @@ public class MainActivity extends AppCompatActivity {
         // (tous les accès sont déjà protégés par null checks)
         setupMainWebView();
         setupHiddenWebView();
+        setupNotificationChannel();
+    }
+
+    private void setupNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel ch = new NotificationChannel(
+                "tcs_reminder",
+                "Rappel mise à jour calendrier",
+                NotificationManager.IMPORTANCE_DEFAULT);
+            ch.setDescription("Rappel mensuel pour importer le planning dans l'agenda");
+            NotificationManager nm = getSystemService(NotificationManager.class);
+            if (nm != null) nm.createNotificationChannel(ch);
+        }
     }
 
     @Override
@@ -516,6 +538,7 @@ public class MainActivity extends AppCompatActivity {
     public void onBackPressed() {
         webView.evaluateJavascript(
             "(function(){" +
+            "if(document.getElementById('evPopup')&&document.getElementById('evPopup').classList.contains('open'))return 'evpopup';" +
             "if(document.getElementById('deletePanel')&&document.getElementById('deletePanel').classList.contains('open'))return 'delete';" +
             "if(document.getElementById('codesPanel')&&document.getElementById('codesPanel').classList.contains('open'))return 'codes';" +
             "if(document.getElementById('renamePanel')&&document.getElementById('renamePanel').classList.contains('open'))return 'rename';" +
@@ -523,7 +546,8 @@ public class MainActivity extends AppCompatActivity {
             "if(document.getElementById('credModal')&&document.getElementById('credModal').classList.contains('open'))return 'cred';" +
             "return 'none';})()",
             result -> {
-                if ("\"delete\"".equals(result))   mainHandler.post(() -> webView.evaluateJavascript("closeDeletePanel();",null));
+                if ("\"evpopup\"".equals(result))   mainHandler.post(() -> webView.evaluateJavascript("closeEventPopup();",null));
+                else if ("\"delete\"".equals(result))   mainHandler.post(() -> webView.evaluateJavascript("closeDeletePanel();",null));
                 else if ("\"codes\"".equals(result))    mainHandler.post(() -> webView.evaluateJavascript("closeCodesPanel();",null));
                 else if ("\"rename\"".equals(result))   mainHandler.post(() -> webView.evaluateJavascript("closeRenamePanel();",null));
                 else if ("\"settings\"".equals(result)) mainHandler.post(() -> webView.evaluateJavascript("closeSettings();",null));
@@ -549,6 +573,99 @@ public class MainActivity extends AppCompatActivity {
                     }
                 } else mainHandler.post(() -> MainActivity.super.onBackPressed());
             });
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // RAPPEL MENSUEL — BroadcastReceiver + AlarmManager
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /** BroadcastReceiver déclenché par AlarmManager chaque mois.
+     *  À enregistrer dans AndroidManifest.xml :
+     *  <receiver android:name=".MainActivity$ReminderReceiver" android:exported="false"/>
+     *  Permissions requises dans le Manifest :
+     *  <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>    (Android 13+)
+     *  <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+     *  <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>       (Android 12+)
+     */
+    public static class ReminderReceiver extends BroadcastReceiver {
+        private static final String PREFS = "tcs_prefs";
+
+        @Override
+        public void onReceive(Context ctx, Intent intent) {
+            // Afficher la notification
+            showReminderNotification(ctx);
+            // Re-planifier pour le mois suivant
+            SharedPreferences prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+            boolean enabled = prefs.getBoolean("reminder_enabled", false);
+            int day = prefs.getInt("reminder_day", 25);
+            if (enabled) scheduleNext(ctx, day);
+        }
+
+        public static void scheduleNext(Context ctx, int targetDay) {
+            java.util.Calendar cal = java.util.Calendar.getInstance();
+            cal.set(java.util.Calendar.HOUR_OF_DAY, 9);
+            cal.set(java.util.Calendar.MINUTE, 0);
+            cal.set(java.util.Calendar.SECOND, 0);
+            cal.set(java.util.Calendar.MILLISECOND, 0);
+
+            // Si le jour cible de ce mois est déjà passé → mois suivant
+            java.util.Calendar now = java.util.Calendar.getInstance();
+            if (now.get(java.util.Calendar.DAY_OF_MONTH) >= targetDay) {
+                cal.add(java.util.Calendar.MONTH, 1);
+            }
+            // Se placer au 1er pour éviter les débordements, puis ajuster
+            cal.set(java.util.Calendar.DAY_OF_MONTH, 1);
+            int maxDay = cal.getActualMaximum(java.util.Calendar.DAY_OF_MONTH);
+            cal.set(java.util.Calendar.DAY_OF_MONTH, Math.min(targetDay, maxDay));
+
+            AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
+            if (am == null) return;
+            Intent i = new Intent(ctx, ReminderReceiver.class);
+            int flags = Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+                ? PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
+                : PendingIntent.FLAG_UPDATE_CURRENT;
+            PendingIntent pi = PendingIntent.getBroadcast(ctx, 42, i, flags);
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, cal.getTimeInMillis(), pi);
+            } else {
+                am.setExact(AlarmManager.RTC_WAKEUP, cal.getTimeInMillis(), pi);
+            }
+        }
+
+        static void showReminderNotification(Context ctx) {
+            NotificationManager nm = (NotificationManager)
+                ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm == null) return;
+
+            Intent openIntent = new Intent(ctx, MainActivity.class);
+            openIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            int piFlags = Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+                ? PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
+                : PendingIntent.FLAG_UPDATE_CURRENT;
+            PendingIntent contentPi = PendingIntent.getActivity(ctx, 0, openIntent, piFlags);
+
+            Notification notif;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                notif = new Notification.Builder(ctx, "tcs_reminder")
+                    .setContentTitle("📅 Rappel TCS Calendar")
+                    .setContentText("Il est temps de mettre à jour votre calendrier !")
+                    .setSmallIcon(android.R.drawable.ic_popup_reminder)
+                    .setContentIntent(contentPi)
+                    .setAutoCancel(true)
+                    .build();
+            } else {
+                //noinspection deprecation
+                notif = new Notification.Builder(ctx)
+                    .setContentTitle("📅 Rappel TCS Calendar")
+                    .setContentText("Il est temps de mettre à jour votre calendrier !")
+                    .setSmallIcon(android.R.drawable.ic_popup_reminder)
+                    .setContentIntent(contentPi)
+                    .setAutoCancel(true)
+                    .build();
+            }
+            nm.notify(1001, notif);
+        }
     }
 
     // ── JavaScript Bridge ─────────────────────────────────────────────────
@@ -640,6 +757,64 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface
         public void showToast(String msg) {
             mainHandler.post(() -> Toast.makeText(MainActivity.this, msg, Toast.LENGTH_LONG).show());
+        }
+
+        @JavascriptInterface
+        public void setCalendarReminder(boolean enabled, int day) {
+            // Sauvegarder les préférences
+            SharedPreferences prefs = getSharedPreferences("tcs_prefs", Context.MODE_PRIVATE);
+            prefs.edit()
+                .putBoolean("reminder_enabled", enabled)
+                .putInt("reminder_day", Math.min(31, Math.max(1, day)))
+                .apply();
+
+            AlarmManager am = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+            if (am == null) return;
+            Intent intent = new Intent(MainActivity.this, ReminderReceiver.class);
+            int flags = Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+                ? PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
+                : PendingIntent.FLAG_UPDATE_CURRENT;
+            PendingIntent pi = PendingIntent.getBroadcast(MainActivity.this, 42, intent, flags);
+
+            if (!enabled) {
+                am.cancel(pi);
+                return;
+            }
+
+            // Calculer la prochaine occurrence du jour cible
+            java.util.Calendar cal = java.util.Calendar.getInstance();
+            cal.set(java.util.Calendar.HOUR_OF_DAY, 9);
+            cal.set(java.util.Calendar.MINUTE, 0);
+            cal.set(java.util.Calendar.SECOND, 0);
+            cal.set(java.util.Calendar.MILLISECOND, 0);
+
+            // Si aujourd'hui >= jour cible → mois prochain
+            if (cal.get(java.util.Calendar.DAY_OF_MONTH) >= day) {
+                cal.add(java.util.Calendar.MONTH, 1);
+            }
+            // Éviter les débordements (ex: 30 en février)
+            cal.set(java.util.Calendar.DAY_OF_MONTH, 1);
+            int maxDay = cal.getActualMaximum(java.util.Calendar.DAY_OF_MONTH);
+            cal.set(java.util.Calendar.DAY_OF_MONTH, Math.min(day, maxDay));
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, cal.getTimeInMillis(), pi);
+            } else {
+                am.setExact(AlarmManager.RTC_WAKEUP, cal.getTimeInMillis(), pi);
+            }
+
+            // Feedback visuel dans le JS
+            String dateStr = pad2(cal.get(java.util.Calendar.DAY_OF_MONTH))
+                + "/" + pad2(cal.get(java.util.Calendar.MONTH) + 1)
+                + "/" + cal.get(java.util.Calendar.YEAR);
+            final String msg = "Prochain rappel : " + dateStr + " à 9h00";
+            mainHandler.post(() ->
+                webView.evaluateJavascript(
+                    "toast('" + msg + "','info',4000);", null));
+        }
+
+        private String pad2(int n) {
+            return n < 10 ? "0" + n : String.valueOf(n);
         }
 
         @JavascriptInterface

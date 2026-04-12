@@ -232,6 +232,35 @@
     .rename-input{flex:1; background:var(--surf); border:1px solid var(--brd); color:var(--text); padding:8px 10px; border-radius:6px; font-size:12px; outline:none; transition:border-color .2s}
     .rename-input:focus{border-color:var(--bluL)}
 
+    /* ── EVENT DETAIL POPUP ── */
+    .ev-popup{position:fixed;inset:0;z-index:950;background:rgba(0,0,0,.7);
+      display:none;align-items:center;justify-content:center;padding:20px}
+    .ev-popup.open{display:flex}
+    .ev-popup-box{background:var(--surf);border:1px solid var(--brd);border-radius:16px;
+      width:100%;max-width:360px;overflow:hidden;
+      box-shadow:0 24px 60px rgba(0,0,0,.6);
+      animation:popIn .25s cubic-bezier(.16,1,.3,1)}
+    @keyframes popIn{from{transform:scale(.88);opacity:0}to{transform:scale(1);opacity:1}}
+    .ev-popup-hdr{display:flex;align-items:center;justify-content:space-between;
+      padding:14px 16px;border-bottom:1px solid var(--brd);background:var(--surf2)}
+    .ev-popup-title{font-size:13px;font-weight:700;flex:1;padding-right:8px}
+    .ev-popup-body{padding:14px 16px}
+    .ev-popup-status{display:inline-flex;align-items:center;gap:5px;
+      padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;margin-bottom:12px}
+    .ev-popup-status.exported{background:rgba(16,185,129,.15);color:var(--ok)}
+    .ev-popup-status.ignored{background:var(--brd);color:var(--muted)}
+    .ev-detail-row{display:flex;gap:10px;padding:7px 0;
+      border-bottom:1px solid var(--brd);font-size:12px;align-items:flex-start}
+    .ev-detail-row:last-child{border-bottom:none;padding-bottom:0}
+    .ev-detail-ico{width:22px;font-size:14px;flex-shrink:0;text-align:center;padding-top:1px}
+    .ev-detail-val{flex:1;line-height:1.5;color:var(--text)}
+    .ev-detail-lbl{font-size:9px;color:var(--muted);display:block;
+      text-transform:uppercase;letter-spacing:.06em;margin-bottom:1px;font-weight:700}
+
+    /* ── RAPPEL — show/hide day row ── */
+    .reminder-day-row{transition:opacity .2s,max-height .25s;overflow:hidden;max-height:120px}
+    .reminder-day-row.hidden-row{opacity:0;max-height:0;pointer-events:none}
+
     /* TOAST */
     .toast{position:fixed;top:16px;left:16px;right:16px;
       background:#1a2740;border-radius:11px;padding:11px 14px;
@@ -458,6 +487,31 @@
   <div class="s-nav-arrow">›</div>
 </button>
 
+    <div class="s-section">&#128276; Rappel calendrier</div>
+    <div class="s-card">
+      <div class="toggle-row" style="border-top:none;padding-top:0;margin-top:0">
+        <div>
+          <div class="toggle-lbl">Rappel mensuel</div>
+          <div class="toggle-sub">Notification pour mettre à jour le calendrier</div>
+        </div>
+        <label class="sw"><input type="checkbox" id="reminderToggle"><div class="sw-track"></div></label>
+      </div>
+      <div class="reminder-day-row hidden-row" id="reminderDayRow">
+        <div class="s-field" style="margin-top:10px">
+          <label class="s-label">Jour du rappel (chaque mois)</label>
+          <input class="s-input" type="number" id="reminderDay" min="1" max="31" value="25"
+            placeholder="Ex: 25" style="-moz-appearance:textfield">
+        </div>
+        <div class="s-hint">
+          &#8505;&#65039; Si le mois n'a pas ce jour (ex&nbsp;: le 30 en f&#233;vrier),
+          le rappel se d&#233;clenchera le dernier jour du mois.
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-blue" onclick="saveReminderSettings()" style="margin-bottom:20px">
+      &#128190; Sauvegarder le rappel
+    </button>
+
     <div class="s-section">Comportement</div>
     <div class="s-card">
       <div class="toggle-row" style="border-top:none;padding-top:0;margin-top:0">
@@ -585,6 +639,17 @@
     <button class="btn btn-ghost" onclick="closeCredModal()" style="margin-top:8px">
       Annuler
     </button>
+  </div>
+</div>
+
+<!-- POPUP DÉTAIL ÉVÉNEMENT -->
+<div class="ev-popup" id="evPopup" onclick="if(event.target===this)closeEventPopup()">
+  <div class="ev-popup-box">
+    <div class="ev-popup-hdr">
+      <div class="ev-popup-title" id="evPopupTitle">Détail de l'événement</div>
+      <button class="btn-x" onclick="closeEventPopup()">&#10005;</button>
+    </div>
+    <div class="ev-popup-body" id="evPopupBody"></div>
   </div>
 </div>
 
@@ -935,12 +1000,87 @@ newRenameInput.addEventListener('keydown', (e) => handleEnter(e, addRenameCodeMa
 const newCodeInput = document.getElementById('newCodeInput');
 newCodeInput.addEventListener('keydown', (e) => handleEnter(e, addCodeManual));
 
+// ── POPUP DÉTAIL ÉVÉNEMENT ────────────────────────────────────────
+var DAY_NAMES=["Dimanche","Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi"];
+function showEventPopup(idx){
+  var ev=events[idx];
+  if(!ev)return;
+  var excl=isExcluded(ev.code);
+  var codesConfig=loadCodes();
+  var cnf=codesConfig.find(function(x){return x.code===ev.code;});
+  var evName=(cnf&&cnf.name)?cnf.name:("Travail - "+ev.code);
+  var p=ev.date.split("/");
+  var dt=new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));
+  var dayName=DAY_NAMES[dt.getDay()];
+  var deb=normTime(ev.debut);
+  var fin=normTime(ev.fin);
+
+  g("evPopupTitle").textContent=ev.code+" \u2014 "+p[0]+"/"+p[1]+"/"+p[2];
+  var html="";
+  html+="<div class='ev-popup-status "+(excl?"ignored":"exported")+"'>"
+    +(excl?"&#9940; Ignor\u00e9 \u2014 non export\u00e9":"&#10003; Export\u00e9 vers l'agenda")+"</div>";
+  html+="<div class='ev-detail-row'><div class='ev-detail-ico'>&#128197;</div>"
+    +"<div class='ev-detail-val'><span class='ev-detail-lbl'>Date</span>"
+    +dayName+" "+p[0]+" "+MOIS[parseInt(p[1])-1]+" "+p[2]+"</div></div>";
+  html+="<div class='ev-detail-row'><div class='ev-detail-ico'>&#128203;</div>"
+    +"<div class='ev-detail-val'><span class='ev-detail-lbl'>Code horaire</span>"+ev.code+"</div></div>";
+  if(evName!=="Travail - "+ev.code||(cnf&&cnf.name)){
+    html+="<div class='ev-detail-row'><div class='ev-detail-ico'>&#127991;&#65039;</div>"
+      +"<div class='ev-detail-val'><span class='ev-detail-lbl'>Nom dans l'agenda</span>"+evName+"</div></div>";
+  }
+  if(deb||fin){
+    html+="<div class='ev-detail-row'><div class='ev-detail-ico'>&#128336;</div>"
+      +"<div class='ev-detail-val'><span class='ev-detail-lbl'>Horaires</span>"
+      +(deb||"\u2014")+" \u2192 "+(fin||"\u2014")+"</div></div>";
+  }
+  if(ev.structure){
+    html+="<div class='ev-detail-row'><div class='ev-detail-ico'>&#128205;</div>"
+      +"<div class='ev-detail-val'><span class='ev-detail-lbl'>Lieu / Structure</span>"+ev.structure+"</div></div>";
+  }
+  if(ev.sousCode){
+    html+="<div class='ev-detail-row'><div class='ev-detail-ico'>&#128278;</div>"
+      +"<div class='ev-detail-val'><span class='ev-detail-lbl'>Sous-code</span>"+ev.sousCode+"</div></div>";
+  }
+  if(ev.memo){
+    html+="<div class='ev-detail-row'><div class='ev-detail-ico'>&#128221;</div>"
+      +"<div class='ev-detail-val'><span class='ev-detail-lbl'>M\u00e9mo</span>"+ev.memo+"</div></div>";
+  }
+  g("evPopupBody").innerHTML=html;
+  g("evPopup").classList.add("open");
+}
+function closeEventPopup(){g("evPopup").classList.remove("open");}
+
+// ── RAPPEL CALENDRIER ─────────────────────────────────────────────
+function loadReminderSettings(){
+  var enabled=localStorage.getItem("tcs_reminder")==="1";
+  var day=parseInt(localStorage.getItem("tcs_reminder_day"))||25;
+  g("reminderToggle").checked=enabled;
+  g("reminderDay").value=day;
+  g("reminderDayRow").classList.toggle("hidden-row",!enabled);
+}
+g("reminderToggle").addEventListener("change",function(){
+  g("reminderDayRow").classList.toggle("hidden-row",!this.checked);
+});
+function saveReminderSettings(){
+  var enabled=g("reminderToggle").checked;
+  var day=Math.min(31,Math.max(1,parseInt(g("reminderDay").value)||25));
+  g("reminderDay").value=day;
+  localStorage.setItem("tcs_reminder",enabled?"1":"0");
+  localStorage.setItem("tcs_reminder_day",day);
+  if(window.Android&&window.Android.setCalendarReminder){
+    window.Android.setCalendarReminder(enabled,day);
+  }
+  toast("&#128276; Rappel "+(enabled?"activ\u00e9 pour le "+day+" de chaque mois":"d\u00e9sactiv\u00e9"),
+    enabled?"ok":"info");
+}
+
 // ── SETTINGS ─────────────────────────────────────────────────────
 g("settingsBtn").addEventListener("click",function(){
   g("credUser").value=localStorage.getItem("tcs_user")||"";
   g("credPass").value=localStorage.getItem("tcs_pass")||"";
   g("autoLoginToggle").checked=localStorage.getItem("tcs_auto")==="1";
   g("confirmExitToggle").checked=localStorage.getItem("tcs_confirm_exit")==="1";
+  loadReminderSettings();
   updateCodesNavSub();
   g("sPanel").classList.add("open");
   checkForUpdate();
@@ -1176,12 +1316,12 @@ function showPreview(evs){
   g("evCount").textContent=totalExported;
   g("evSub").textContent=totalIgnored>0?totalIgnored+" jour(s) ignor\u00e9(s) non export\u00e9(s)":"";
 
-  g("evList").innerHTML=evs.map(function(ev){
+  g("evList").innerHTML=evs.map(function(ev,idx){
     var p=ev.date.split("/");
     var d=normTime(ev.debut)||"\u2014",f=normTime(ev.fin)||"\u2014";
     var excl=isExcluded(ev.code);
     var badge=excl?'<span class="ev-ign-badge">ignor\u00e9</span>':'';
-    return "<div class='ev-item"+(excl?" excluded":"")+"'>"
+    return "<div class='ev-item"+(excl?" excluded":"")+"' onclick='showEventPopup("+idx+")' style='cursor:pointer'>"
       +"<span class='ev-date'>"+p[0]+"/"+p[1]+"</span>"
       +"<span class='ev-code'>"+ev.code+"</span>"
       +"<span class='ev-time'>"+d+"\u2192"+f+"</span>"
@@ -1202,11 +1342,11 @@ function renderCalendar(evs, month, year){
   dowEl.innerHTML=DOW.map(function(d){return "<div class='cal-dow-cell'>"+d+"</div>";}).join("");
 
   var byDay={};
-  evs.forEach(function(ev){
+  evs.forEach(function(ev,i){
     var d=ev.date.split("/")[0];
     var key=parseInt(d);
     if(!byDay[key])byDay[key]=[];
-    byDay[key].push(ev);
+    byDay[key].push({ev:ev,idx:i});
   });
 
   var firstDow=(new Date(year,month,1).getDay()+6)%7;
@@ -1220,8 +1360,8 @@ function renderCalendar(evs, month, year){
   for(var d=1;d<=daysInMonth;d++){
     var dayEvs=byDay[d]||[];
     var isToday=(today.getDate()===d&&today.getMonth()===month&&today.getFullYear()===year);
-    var allExcl=dayEvs.length>0&&dayEvs.every(function(e){return isExcluded(e.code);});
-    var hasExp=dayEvs.some(function(e){return !isExcluded(e.code);});
+    var allExcl=dayEvs.length>0&&dayEvs.every(function(item){return isExcluded(item.ev.code);});
+    var hasExp=dayEvs.some(function(item){return !isExcluded(item.ev.code);});
 
     var cls="cal-day";
     if(isToday)cls+=" today";
@@ -1229,10 +1369,11 @@ function renderCalendar(evs, month, year){
     else if(hasExp||dayEvs.length)cls+=" has-event";
 
     html+="<div class='"+cls+"'><div class='cal-day-num'>"+d+"</div>";
-    dayEvs.forEach(function(ev){
+    dayEvs.forEach(function(item){
+      var ev=item.ev;
       var excl=isExcluded(ev.code);
       var t=normTime(ev.debut)||"";
-      html+="<div class='cal-code"+(excl?" excl":"")+"'>"+ev.code+"</div>";
+      html+="<div class='cal-code"+(excl?" excl":"")+"' onclick='showEventPopup("+item.idx+")' style='cursor:pointer'>"+ev.code+"</div>";
       if(t&&!excl)html+="<div class='cal-time'>"+t+"</div>";
     });
     html+="</div>";
