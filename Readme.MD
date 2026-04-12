@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/version-6.0.1-blue) ![Android](https://img.shields.io/badge/Android-7.0%2B-green)
+![Version](https://img.shields.io/badge/version-6.0.2-blue) ![Android](https://img.shields.io/badge/Android-7.0%2B-green)
 
 # ICS-Calendar 📅
 
@@ -71,7 +71,7 @@ La version 5 pousse encore plus loin l'automatisation et le confort d'utilisatio
 
 ---
 
-## 🆕 Nouveautés de la Version 6.0
+## 🆕 Nouveautés de la Version 6
 ### ✨ Ajouts
 - 🔔 **Rappel mensuel** : activez une notification mensuelle dans les paramètres
   pour ne plus oublier d'importer votre horaire. La date de rappel est entièrement
