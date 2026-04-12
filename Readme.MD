@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/version-5.0-blue) ![Android](https://img.shields.io/badge/Android-7.0%2B-green)
+![Version](https://img.shields.io/badge/version-6.0-blue) ![Android](https://img.shields.io/badge/Android-7.0%2B-green)
 
 # ICS-Calendar 📅
 
@@ -61,7 +61,6 @@ La version 5 pousse encore plus loin l'automatisation et le confort d'utilisatio
   * Il reste bien sûr possible de **modifier manuellement** la période souhaitée si nécessaire.
   > *L'export du mois en cours ne demande plus aucune manipulation supplémentaire.*
 
----
 
 ### 💡 Améliorations globales
 
@@ -69,6 +68,17 @@ La version 5 pousse encore plus loin l'automatisation et le confort d'utilisatio
 * Réduction des étapes nécessaires à l'export
 * Meilleure intégration avec le navigateur embarqué
 * Prise en main immédiate dès le premier lancement
+
+---
+
+## 🆕 Version 6.0
+### ✨ Ajouts
+- 🔔 **Rappel mensuel** : activez une notification mensuelle dans les paramètres
+  pour ne plus oublier d'importer votre horaire. La date de rappel est entièrement
+  personnalisable.
+- 📋 **Fiche détail** : appuyez sur n'importe quel événement — aussi bien en **vue
+  liste** qu'en **vue calendrier** — pour afficher l'intégralité de ses informations
+  (lieu complet, notes, mémos) dans une fenêtre dédiée.
 
 ---
 
