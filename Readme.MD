@@ -71,7 +71,7 @@ La version 5 pousse encore plus loin l'automatisation et le confort d'utilisatio
 
 ---
 
-## 🆕 Version 6.0
+## 🆕 Nouveautés de la Version 6.0
 ### ✨ Ajouts
 - 🔔 **Rappel mensuel** : activez une notification mensuelle dans les paramètres
   pour ne plus oublier d'importer votre horaire. La date de rappel est entièrement
