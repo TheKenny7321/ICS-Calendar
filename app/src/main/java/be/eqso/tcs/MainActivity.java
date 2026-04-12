@@ -94,6 +94,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+		SharedPreferences prefs = getSharedPreferences("tcs_prefs", Context.MODE_PRIVATE);
+		confirmExit = prefs.getBoolean("confirm_exit", false);
 
         webView      = findViewById(R.id.webView);
         hiddenWebView = findViewById(R.id.hiddenWebView);
@@ -829,8 +831,13 @@ public class MainActivity extends AppCompatActivity {
             return n < 10 ? "0" + n : String.valueOf(n);
         }
 
-        @JavascriptInterface
-        public void setConfirmExit(boolean value) { confirmExit = value; }
+		@JavascriptInterface
+		public void setConfirmExit(boolean value) {
+			confirmExit = value;
+
+			SharedPreferences prefs = getSharedPreferences("tcs_prefs", Context.MODE_PRIVATE);
+			prefs.edit().putBoolean("confirm_exit", value).apply();
+		}
 
         @JavascriptInterface
         public void setAutoLoginCredentials(String user, String pass) {
