@@ -1,15 +1,23 @@
-![Version](https://img.shields.io/badge/version-6.0.2-blue) ![Android](https://img.shields.io/badge/Android-7.0%2B-green)
+![Version](https://img.shields.io/badge/version-6.0.2-blue) ![Android](https://img.shields.io/badge/Android-7.0%2B-green) ![Windows](https://img.shields.io/badge/Windows-10%2B-0078D6?logo=windows&logoColor=white)
 
 # ICS-Calendar 📅
+> Convertissez automatiquement votre planning RHTime en agenda sur smartphone et Windows
 
 **ICS-Calendar** est l'outil indispensable pour les utilisateurs de **RHTime**. Il vous permet de transformer votre planning professionnel (téléchargeable en `.xml` depuis RHTime) en événements de calendrier (`.ics`) parfaitement intégrés à votre smartphone.
 
-### 🌟 Points forts
+## 🌟 Points forts
 * **Intégration RHTime** : Connectez-vous et exportez votre horaire en deux clics.
 * **Zéro perte de données** : Toutes vos informations (mémos, codes horaires, lieux) sont conservées.
-* **Conversion automatique** : L'application détecte le XML et génère le fichier ICS instantanément.
+* **Conversion automatique** : L'application détecte automatiquement le fichier XML et génère instantanément le fichier ICS.
 * **Flexibilité** : Ajoutez l'événement à votre agenda personnel ou partagez-le avec vos collègues.
 * **Agenda sur mesure** : Ignorez les codes inutiles (congés, vacances…) et renommez les codes bruts en libellés clairs directement dans votre calendrier.
+
+## ❓ Pourquoi utiliser ICS-Calendar ?
+
+- Automatisation complète (zéro manipulation répétitive)
+- Compatible RHTime directement
+- Aucune perte de données
+- 100% local (respect de la vie privée)
 
 ---
 
@@ -79,6 +87,7 @@ La version 5 pousse encore plus loin l'automatisation et le confort d'utilisatio
 - 📋 **Fiche détail** : appuyez sur n'importe quel événement — aussi bien en **vue
   liste** qu'en **vue calendrier** — pour afficher l'intégralité de ses informations
   (lieu complet, notes, mémos) dans une fenêtre dédiée.
+- 📱 **Amélioration générale de l'interface**: Uniformisation de l'interface par rapport aux nouvelles fonctionnalités ajoutées.
 
 ---
 
@@ -97,6 +106,12 @@ L'application n'étant pas sur le Play Store, voici la marche à suivre :
 1. Téléchargez l'APK depuis l'onglet **Releases** de ce dépôt → [Télécharger la dernière version](https://github.com/TheKenny7321/ICS-Calendar/releases/latest/download/TCS.Calendar.apk)
 2. Autorisez l'installation depuis des sources inconnues dans vos paramètres Android.
 3. Installez et lancez !
+
+## 🔐 Confidentialité
+
+- Aucune donnée envoyée à un serveur externe
+- Identifiants stockés localement uniquement
+- Projet open-source et vérifiable
 
 > [!IMPORTANT]
 > **Play Protect** : Si Google Play Protect affiche un avertissement, cliquez sur "Détails" puis "Installer quand même". Le projet est open-source et ne collecte aucune donnée.
@@ -151,6 +166,7 @@ Contrairement à d'autres convertisseurs basiques, **ICS-Calendar** extrait et r
 
 *Cela vous permet de retrouver vos consignes spécifiques ou vos numéros de poste directement dans la notification de votre calendrier.*
 
+
 ---
 
-*Application conçue et développée par Kenny, avec l'aide de [Claude](https://claude.ai) (Anthropic) pour le développement et le débogage.*
+*Application conçue et développée par Skrabel Kenny, avec assistance de [Claude](https://claude.ai) (Anthropic) pour certaines phases de développement et de débogage.*
