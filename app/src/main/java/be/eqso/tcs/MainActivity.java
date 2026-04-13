@@ -19,6 +19,7 @@ import android.os.Looper;
 import android.util.Log;
 import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
+import android.webkit.JsResult;
 import android.webkit.URLUtil;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -73,6 +74,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean loginDone       = false;  // étape 1 : login OK
     private boolean monthNavDone    = false;  // étape 2 : mois chargé
     private boolean loginAttempted  = false;  // autologin déjà injecté une fois
+    private boolean badCredentials  = false;  // alerte "identifiants incorrects" détectée
     private String  hiddenToken    = null;   // token extrait depuis la hidden WebView
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -212,6 +214,27 @@ public class MainActivity extends AppCompatActivity {
         configureWebViewSettings(hiddenWebView);
         CookieManager.getInstance().setAcceptThirdPartyCookies(hiddenWebView, true);
 
+        // Intercepter les alert() JS — le site affiche "le login et/ou le mot de passe
+        // est incorrect." via alert() quand les identifiants sont mauvais.
+        hiddenWebView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onJsAlert(WebView view, String url, String message, JsResult result) {
+                result.confirm(); // fermer l'alerte sans l'afficher
+                if (message != null && importActive && !loginDone) {
+                    String lower = message.toLowerCase();
+                    boolean isAuthError =
+                        (lower.contains("login") || lower.contains("identifiant")
+                            || lower.contains("mot de passe") || lower.contains("password"))
+                        && (lower.contains("incorrect") || lower.contains("invalide")
+                            || lower.contains("erreur") || lower.contains("error"));
+                    if (isAuthError) {
+                        handleBadCredentials();
+                    }
+                }
+                return true; // on gère l'alerte nous-mêmes
+            }
+        });
+
         hiddenWebView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
@@ -219,7 +242,7 @@ public class MainActivity extends AppCompatActivity {
             }
             @Override
             public void onPageFinished(WebView view, String url) {
-                if (!importActive) return;
+                if (!importActive || badCredentials) return;
                 if (!url.contains("tcs.eqso.be")) return;
 
                 boolean isLoginPage = !url.contains("RHTIME_Planning") && !url.contains("Page_Identification");
@@ -230,14 +253,8 @@ public class MainActivity extends AppCompatActivity {
                         injectAutologin(view, autoLoginUser, autoLoginPass);
                     } else {
                         // Deuxième arrivée sur la page de login → identifiants incorrects
-                        importActive   = false;
-                        loginAttempted = false;
-                        String safeUser = autoLoginUser != null
-                            ? autoLoginUser.replace("\\", "\\\\").replace("'", "\\'") : "";
-                        mainHandler.post(() ->
-                            webView.evaluateJavascript(
-                                "if(typeof showWrongPassPopup==='function')" +
-                                "showWrongPassPopup('" + safeUser + "');", null));
+                        // (filet de sécurité si le site ne déclenche pas d'alert JS)
+                        handleBadCredentials();
                     }
                 } else {
                     mainHandler.postDelayed(() -> extractHiddenToken(view, url), 500);
@@ -247,6 +264,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void extractHiddenToken(WebView view, String url) {
+        if (!importActive || badCredentials) return;
         // Essai dans l'URL
         // Chercher le token dans RHTIME_Planning OU Page_Identification
         Matcher m = Pattern
@@ -278,7 +296,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void onHiddenTokenReady(WebView view, String url) {
-        if (!importActive) return;
+        if (!importActive || badCredentials) return;
 
         if (!loginDone) {
             // Connexion OK
@@ -381,6 +399,26 @@ public class MainActivity extends AppCompatActivity {
         mainHandler.post(() ->
             webView.evaluateJavascript(
                 "if(typeof " + fnName + "==='function')" + fnName + "();", null));
+    }
+
+    /** Appelé dès qu'on détecte des identifiants incorrects (alert JS ou double login). */
+    private void handleBadCredentials() {
+        if (badCredentials) return; // déjà traité
+        badCredentials = true;
+        importActive   = false;
+        loginDone      = false;
+        monthNavDone   = false;
+        loginAttempted = false;
+        String safeUser = autoLoginUser != null
+            ? autoLoginUser.replace("\\", "\\\\").replace("'", "\\'") : "";
+        mainHandler.post(() -> {
+            if (hiddenWebView != null) hiddenWebView.stopLoading();
+            // Remettre l'UI de progression en état initial
+            webView.evaluateJavascript("if(typeof _resetImportUI==='function')_resetImportUI();", null);
+            webView.evaluateJavascript(
+                "if(typeof showWrongPassPopup==='function')" +
+                "showWrongPassPopup('" + safeUser + "');", null);
+        });
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -703,6 +741,7 @@ public class MainActivity extends AppCompatActivity {
             loginDone      = false;
             monthNavDone   = false;
             loginAttempted = false;
+            badCredentials = false;
             hiddenToken    = null;
             mainHandler.post(() -> {
                 // Charger RHTime dans la WebView CACHÉE — la principale reste sur index.html
@@ -715,7 +754,7 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface
         public void cancelAutoImport() {
             importActive = false; loginDone = false; monthNavDone = false;
-            loginAttempted = false;
+            loginAttempted = false; badCredentials = false;
             hiddenToken = null;
             mainHandler.post(() -> {
                 if (hiddenWebView != null) hiddenWebView.stopLoading();
