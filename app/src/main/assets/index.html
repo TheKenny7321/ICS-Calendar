@@ -563,7 +563,7 @@
     <div class="version-row">
       <div>
         <div class="version-info">Version actuelle</div>
-        <div class="version-num" id="versionDisplay">6.0.3</div>
+        <div class="version-num" id="versionDisplay">6.0.4</div>
         <div id="updateStatus"></div>
       </div>
       <button id="githubLink" onclick="openExternalUrl('https://github.com/TheKenny7321/ICS-Calendar/releases/latest')"
@@ -678,6 +678,42 @@
     </button>
     <button class="btn btn-ghost" onclick="closeCredModal()" style="margin-top:8px">
       Annuler
+    </button>
+  </div>
+</div>
+
+<!-- MODAL MOT DE PASSE INCORRECT -->
+<div class="cred-modal" id="wrongPassModal">
+  <div class="cred-box">
+    <h3 style="color:var(--err)">&#9888;&#65039; Identifiants incorrects</h3>
+    <p>Le login et/ou le mot de passe est incorrect. V&#233;rifiez vos identifiants et r&#233;essayez.</p>
+    <div class="s-field">
+      <label class="s-label">Identifiant</label>
+      <input class="s-input" type="text" id="wrongPassUser"
+        autocorrect="off" autocapitalize="none" spellcheck="false">
+    </div>
+    <div class="s-field" style="margin-top:10px">
+      <label class="s-label">Mot de passe</label>
+      <div class="pass-wrap">
+        <input class="s-input" type="password" id="wrongPassInput"
+          placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;">
+        <button class="eye-btn" type="button" id="wrongPassEye"
+          onclick="togglePass('wrongPassInput','wrongPassEye')"
+          tabindex="-1" aria-label="Afficher/masquer le mot de passe">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <button class="btn btn-blue" onclick="retryWithNewPass()" style="margin-top:14px">
+      &#128260; R&#233;essayer
+    </button>
+    <button class="btn btn-danger" onclick="closeWrongPassModal()" style="margin-top:8px">
+      Annuler l&#39;import
     </button>
   </div>
 </div>
@@ -1343,6 +1379,44 @@ function saveQuickCredentials(){
   _launchImport(u, p);
 }
 
+// ── POPUP MOT DE PASSE INCORRECT ─────────────────────────────────
+// Appelée depuis Android quand le login échoue
+function showWrongPassPopup(user){
+  // Arrêter et masquer la barre de progression
+  _resetImportUI();
+  // Pré-remplir l'identifiant
+  g("wrongPassUser").value = user || localStorage.getItem("tcs_user") || "";
+  g("wrongPassInput").value = "";
+  // Réinitialiser l'œil
+  var eye = g("wrongPassEye");
+  if(eye) eye.innerHTML = _EYE_OPEN;
+  g("wrongPassInput").type = "password";
+  g("wrongPassModal").classList.add("open");
+  // Focus sur le champ MDP après l'animation
+  setTimeout(function(){ g("wrongPassInput").focus(); }, 300);
+  toast("\uD83D\uDD12 Login ou mot de passe incorrect","err",4000);
+}
+
+function closeWrongPassModal(){
+  g("wrongPassModal").classList.remove("open");
+  _resetImportUI();
+}
+
+function retryWithNewPass(){
+  var u = g("wrongPassUser").value.trim();
+  var p = g("wrongPassInput").value;
+  if(!u){ toast("Identifiant manquant","warn"); return; }
+  if(!p){ toast("Mot de passe manquant","warn"); return; }
+  // Sauvegarder les nouveaux identifiants
+  localStorage.setItem("tcs_user", u);
+  localStorage.setItem("tcs_pass", p);
+  localStorage.setItem("tcs_auto", "1");
+  if(g("credUser")) g("credUser").value = u;
+  if(g("credPass")) g("credPass").value = p;
+  closeWrongPassModal();
+  _launchImport(u, p);
+}
+
 function closeCredModal(){
   g("credModal").classList.remove("open");
 }
@@ -1612,7 +1686,7 @@ function reset(){
 
 
 // ── BOUTON FLOTTANT RHTIME EXPORT ────────────────────────────────
-var APP_VERSION = "6.0.3";
+var APP_VERSION = "6.0.4";
 
 function openExternalUrl(url) {
   // Ouvre dans le navigateur système externe (Chrome, Firefox...)
@@ -1694,6 +1768,14 @@ initDrag('renameList');
 
 var initCE=localStorage.getItem("tcs_confirm_exit")==="1";
 if(window.Android&&window.Android.setConfirmExit)window.Android.setConfirmExit(initCE);
+
+// Enter dans le popup "mauvais mot de passe" → relancer l'import
+g("wrongPassInput").addEventListener("keydown", function(e){
+  if(e.key==="Enter"){ e.preventDefault(); retryWithNewPass(); }
+});
+g("wrongPassUser").addEventListener("keydown", function(e){
+  if(e.key==="Enter"){ e.preventDefault(); g("wrongPassInput").focus(); }
+});
 </script>
 </body>
 </html>

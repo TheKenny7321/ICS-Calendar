@@ -69,9 +69,10 @@ public class MainActivity extends AppCompatActivity {
     // Smart auto-import (WebView cachée)
     private int     importMonth    = 0;
     private int     importYear     = 0;
-    private boolean importActive   = false;
-    private boolean loginDone      = false;  // étape 1 : login OK
-    private boolean monthNavDone   = false;  // étape 2 : mois chargé
+    private boolean importActive    = false;
+    private boolean loginDone       = false;  // étape 1 : login OK
+    private boolean monthNavDone    = false;  // étape 2 : mois chargé
+    private boolean loginAttempted  = false;  // autologin déjà injecté une fois
     private String  hiddenToken    = null;   // token extrait depuis la hidden WebView
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -223,7 +224,21 @@ public class MainActivity extends AppCompatActivity {
 
                 boolean isLoginPage = !url.contains("RHTIME_Planning") && !url.contains("Page_Identification");
                 if (!loginDone && isLoginPage) {
-                    injectAutologin(view, autoLoginUser, autoLoginPass);
+                    if (!loginAttempted) {
+                        // Première tentative — injecter les identifiants
+                        loginAttempted = true;
+                        injectAutologin(view, autoLoginUser, autoLoginPass);
+                    } else {
+                        // Deuxième arrivée sur la page de login → identifiants incorrects
+                        importActive   = false;
+                        loginAttempted = false;
+                        String safeUser = autoLoginUser != null
+                            ? autoLoginUser.replace("\\", "\\\\").replace("'", "\\'") : "";
+                        mainHandler.post(() ->
+                            webView.evaluateJavascript(
+                                "if(typeof showWrongPassPopup==='function')" +
+                                "showWrongPassPopup('" + safeUser + "');", null));
+                    }
                 } else {
                     mainHandler.postDelayed(() -> extractHiddenToken(view, url), 500);
                 }
@@ -544,6 +559,7 @@ public class MainActivity extends AppCompatActivity {
         webView.evaluateJavascript(
             "(function(){" +
             "if(document.getElementById('evPopup')&&document.getElementById('evPopup').classList.contains('open'))return 'evpopup';" +
+            "if(document.getElementById('wrongPassModal')&&document.getElementById('wrongPassModal').classList.contains('open'))return 'wrongpass';" +
             "if(document.getElementById('deletePanel')&&document.getElementById('deletePanel').classList.contains('open'))return 'delete';" +
             "if(document.getElementById('codesPanel')&&document.getElementById('codesPanel').classList.contains('open'))return 'codes';" +
             "if(document.getElementById('renamePanel')&&document.getElementById('renamePanel').classList.contains('open'))return 'rename';" +
@@ -552,6 +568,7 @@ public class MainActivity extends AppCompatActivity {
             "return 'none';})()",
             result -> {
                 if ("\"evpopup\"".equals(result))   mainHandler.post(() -> webView.evaluateJavascript("closeEventPopup();",null));
+                else if ("\"wrongpass\"".equals(result)) mainHandler.post(() -> webView.evaluateJavascript("closeWrongPassModal();",null));
                 else if ("\"delete\"".equals(result))   mainHandler.post(() -> webView.evaluateJavascript("closeDeletePanel();",null));
                 else if ("\"codes\"".equals(result))    mainHandler.post(() -> webView.evaluateJavascript("closeCodesPanel();",null));
                 else if ("\"rename\"".equals(result))   mainHandler.post(() -> webView.evaluateJavascript("closeRenamePanel();",null));
@@ -685,6 +702,7 @@ public class MainActivity extends AppCompatActivity {
             importActive   = true;
             loginDone      = false;
             monthNavDone   = false;
+            loginAttempted = false;
             hiddenToken    = null;
             mainHandler.post(() -> {
                 // Charger RHTime dans la WebView CACHÉE — la principale reste sur index.html
@@ -697,6 +715,7 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface
         public void cancelAutoImport() {
             importActive = false; loginDone = false; monthNavDone = false;
+            loginAttempted = false;
             hiddenToken = null;
             mainHandler.post(() -> {
                 if (hiddenWebView != null) hiddenWebView.stopLoading();
@@ -910,6 +929,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @JavascriptInterface
-        public String getAppVersion() { return "6.0.3"; }
+        public String getAppVersion() { return "6.0.4"; }
     }
 }
