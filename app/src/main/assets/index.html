@@ -338,6 +338,14 @@
     .imp-bar{height:100%;border-radius:99px;width:0%;transition:width .5s ease;
       background:linear-gradient(90deg,var(--blue),var(--cyan))}
 
+    /* Wrapper champ mot de passe + bouton œil */
+    .pass-wrap{position:relative;display:flex;align-items:center}
+    .pass-wrap .s-input{padding-right:44px;flex:1}
+    .eye-btn{position:absolute;right:0;top:0;bottom:0;width:44px;background:transparent;
+      border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;
+      color:var(--muted);padding:0;flex-shrink:0;transition:color .2s;border-radius:0 8px 8px 0}
+    .eye-btn:active{color:var(--text)}
+
     /* Modal identifiants rapide */
     .cred-modal{position:fixed;inset:0;z-index:800;
       background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center}
@@ -466,8 +474,13 @@
       </div>
       <div class="s-field">
         <label class="s-label">Mot de passe</label>
-        <input class="s-input" type="password" id="credPass" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;"
-          autocomplete="current-password">
+        <div class="pass-wrap">
+          <input class="s-input" type="password" id="credPass" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;"
+            autocomplete="current-password">
+          <button class="eye-btn" type="button" id="credPassEye" onclick="toggleSettingsPass('credPassEye')" tabindex="-1" aria-label="Afficher le mot de passe (authentification requise)" title="Vérification biométrique requise">
+            <svg id="credPassEyeIco" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
       </div>
       <div class="s-hint">&#128274; Identifiants stock&#233;s uniquement sur cet appareil. La connexion automatique est toujours activ&#233;e.</div>
     </div>
@@ -550,7 +563,7 @@
     <div class="version-row">
       <div>
         <div class="version-info">Version actuelle</div>
-        <div class="version-num" id="versionDisplay">6.0.2</div>
+        <div class="version-num" id="versionDisplay">6.0.3</div>
         <div id="updateStatus"></div>
       </div>
       <button id="githubLink" onclick="openExternalUrl('https://github.com/TheKenny7321/ICS-Calendar/releases/latest')"
@@ -653,7 +666,12 @@
     </div>
     <div class="s-field" style="margin-top:10px">
       <label class="s-label">Mot de passe</label>
-      <input class="s-input" type="password" id="quickPass" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;">
+      <div class="pass-wrap">
+        <input class="s-input" type="password" id="quickPass" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;">
+        <button class="eye-btn" type="button" id="quickPassEye" onclick="togglePass('quickPass','quickPassEye')" tabindex="-1" aria-label="Afficher/masquer le mot de passe">
+          <svg id="quickPassEyeIco" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
     </div>
     <button class="btn btn-blue" onclick="saveQuickCredentials()" style="margin-top:14px">
       &#128640; Connexion et import
@@ -714,6 +732,54 @@ function toast(msg,type,ms){
   el.style.borderLeftColor=c[type]||c.ok;
   el.textContent=msg;el.style.display="block";
   clearTimeout(el._t);el._t=setTimeout(function(){el.style.display="none";},ms);
+}
+
+// ── EYE TOGGLE — MOT DE PASSE ─────────────────────────────────────
+var _EYE_OPEN='<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+var _EYE_OFF='<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+
+// Toggle simple (pop-up connexion rapide)
+function togglePass(fieldId, btnId){
+  var inp=g(fieldId), btn=g(btnId);
+  if(!inp||!btn)return;
+  var show=inp.type==="password";
+  inp.type=show?"text":"password";
+  btn.innerHTML=show?_EYE_OFF:_EYE_OPEN;
+}
+
+// Toggle avec authentification biométrique (paramètres)
+var _pendingBioBtn=null;
+function toggleSettingsPass(btnId){
+  var inp=g("credPass"), btn=g(btnId);
+  if(!inp||!btn)return;
+  if(inp.type==="text"){
+    // Re-masquer sans authentification
+    inp.type="password";
+    btn.innerHTML=_EYE_OPEN;
+    return;
+  }
+  // Demander la biométrie pour afficher
+  _pendingBioBtn=btnId;
+  if(window.Android&&window.Android.requestBiometric){
+    window.Android.requestBiometric();
+  } else {
+    // Fallback navigateur (démo hors APK)
+    onBiometricSuccess();
+  }
+}
+
+// Appelé par Android après succès biométrique
+function onBiometricSuccess(){
+  var inp=g("credPass");
+  if(inp) inp.type="text";
+  if(_pendingBioBtn){ var btn=g(_pendingBioBtn); if(btn) btn.innerHTML=_EYE_OFF; }
+  _pendingBioBtn=null;
+}
+
+// Appelé par Android en cas d'échec / annulation
+function onBiometricFailed(){
+  _pendingBioBtn=null;
+  toast("\uD83D\uDD12 Authentification refus\u00e9e","err",2500);
 }
 
 // ── CODES MANAGEMENT ─────────────────────────────────────────────
@@ -1201,7 +1267,13 @@ function addRenameCodeManual(){
   renderRenameList(); // refresh direct
   toast("✅ Code '"+code+"' ajouté");
 }
-function closeSettings(){g("sPanel").classList.remove("open");}
+function closeSettings(){
+  // Re-masquer le mot de passe et réinitialiser l'icône
+  var inp=g("credPass"), btn=g("credPassEye");
+  if(inp) inp.type="password";
+  if(btn) btn.innerHTML=_EYE_OPEN;
+  g("sPanel").classList.remove("open");
+}
 function saveCredentials(){
   localStorage.setItem("tcs_user",g("credUser").value.trim());
   localStorage.setItem("tcs_pass",g("credPass").value);
@@ -1540,7 +1612,7 @@ function reset(){
 
 
 // ── BOUTON FLOTTANT RHTIME EXPORT ────────────────────────────────
-var APP_VERSION = "6.0.2";
+var APP_VERSION = "6.0.3";
 
 function openExternalUrl(url) {
   // Ouvre dans le navigateur système externe (Chrome, Firefox...)

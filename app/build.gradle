@@ -10,8 +10,8 @@ android {
         applicationId "be.eqso.tcs"
         minSdk 26
         targetSdk 34
-        versionCode 9
-        versionName "6.0.2"
+        versionCode 10
+        versionName "6.0.3"
     }
 
     signingConfigs {
@@ -50,4 +50,5 @@ dependencies {
     implementation 'androidx.webkit:webkit:1.10.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.activity:activity:1.8.2'
+	implementation "androidx.biometric:biometric:1.1.0"
 }

@@ -32,6 +32,9 @@ import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.biometric.BiometricManager;
+import androidx.biometric.BiometricPrompt;
+import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
 import java.io.ByteArrayOutputStream;
@@ -859,6 +862,54 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @JavascriptInterface
-        public String getAppVersion() { return "6.0.2"; }
+        public void requestBiometric() {
+            mainHandler.post(() -> {
+                // Vérifier si une authentification forte est disponible (biométrie ou code PIN)
+                BiometricManager bm = BiometricManager.from(MainActivity.this);
+                int canAuth = bm.canAuthenticate(
+                    BiometricManager.Authenticators.BIOMETRIC_STRONG |
+                    BiometricManager.Authenticators.DEVICE_CREDENTIAL);
+
+                if (canAuth != BiometricManager.BIOMETRIC_SUCCESS) {
+                    // Aucun mécanisme de sécurité disponible sur cet appareil
+                    webView.evaluateJavascript("onBiometricFailed();", null);
+                    return;
+                }
+
+                BiometricPrompt.PromptInfo promptInfo = new BiometricPrompt.PromptInfo.Builder()
+                    .setTitle("Afficher le mot de passe")
+                    .setSubtitle("Vérifiez votre identité pour voir le mot de passe enregistré")
+                    .setAllowedAuthenticators(
+                        BiometricManager.Authenticators.BIOMETRIC_STRONG |
+                        BiometricManager.Authenticators.DEVICE_CREDENTIAL)
+                    .build();
+
+                BiometricPrompt prompt = new BiometricPrompt(
+                    MainActivity.this,
+                    ContextCompat.getMainExecutor(MainActivity.this),
+                    new BiometricPrompt.AuthenticationCallback() {
+                        @Override
+                        public void onAuthenticationSucceeded(
+                                BiometricPrompt.AuthenticationResult result) {
+                            webView.evaluateJavascript("onBiometricSuccess();", null);
+                        }
+                        @Override
+                        public void onAuthenticationFailed() {
+                            // L'utilisateur peut réessayer — ne pas appeler onBiometricFailed
+                        }
+                        @Override
+                        public void onAuthenticationError(int errorCode,
+                                CharSequence errString) {
+                            // Annulé ou erreur définitive
+                            webView.evaluateJavascript("onBiometricFailed();", null);
+                        }
+                    });
+
+                prompt.authenticate(promptInfo);
+            });
+        }
+
+        @JavascriptInterface
+        public String getAppVersion() { return "6.0.3"; }
     }
 }
