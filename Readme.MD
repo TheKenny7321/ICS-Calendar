@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/version-6.0.2-blue) ![Android](https://img.shields.io/badge/Android-7.0%2B-green) ![Windows](https://img.shields.io/badge/Windows-10%2B-0078D6?logo=windows&logoColor=white)
+![Version](https://img.shields.io/badge/version-6.0.3-blue) ![Android](https://img.shields.io/badge/Android-7.0%2B-green) ![Windows](https://img.shields.io/badge/Windows-10%2B-0078D6?logo=windows&logoColor=white)
 
 # ICS-Calendar 📅
 > Convertissez automatiquement votre planning RHTime en agenda sur smartphone et Windows
@@ -88,6 +88,7 @@ La version 5 pousse encore plus loin l'automatisation et le confort d'utilisatio
   liste** qu'en **vue calendrier** — pour afficher l'intégralité de ses informations
   (lieu complet, notes, mémos) dans une fenêtre dédiée.
 - 📱 **Amélioration générale de l'interface**: Uniformisation de l'interface par rapport aux nouvelles fonctionnalités ajoutées.
+  Ajout d'une option **sécurisée** permettant d'afficher son mot de passe.
 
 ---
 
