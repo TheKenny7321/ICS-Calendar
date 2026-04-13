@@ -88,7 +88,7 @@ La version 5 pousse encore plus loin l'automatisation et le confort d'utilisatio
   liste** qu'en **vue calendrier** — pour afficher l'intégralité de ses informations
   (lieu complet, notes, mémos) dans une fenêtre dédiée.
 - 📱 **Amélioration générale de l'interface**: Uniformisation de l'interface par rapport aux nouvelles fonctionnalités ajoutées.
-  Ajout d'une option **sécurisée** permettant d'afficher son mot de passe ainsiqu'une détection d'identifiants incorrects.
+  Ajout d'une option **sécurisée** permettant d'afficher son mot de passe ainsi qu'une **détection d'identifiants incorrects**.
 
 ---
 
