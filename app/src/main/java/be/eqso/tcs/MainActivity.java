@@ -19,7 +19,6 @@ import android.os.Looper;
 import android.util.Log;
 import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
-import android.webkit.JsResult;
 import android.webkit.URLUtil;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -210,30 +209,8 @@ public class MainActivity extends AppCompatActivity {
 
     @SuppressLint("SetJavaScriptEnabled")
     private void setupHiddenWebView() {
-        // hiddenWebView est récupéré depuis le layout (visible en mode debug)
         configureWebViewSettings(hiddenWebView);
         CookieManager.getInstance().setAcceptThirdPartyCookies(hiddenWebView, true);
-
-        // Intercepter les alert() JS — le site affiche "le login et/ou le mot de passe
-        // est incorrect." via alert() quand les identifiants sont mauvais.
-        hiddenWebView.setWebChromeClient(new WebChromeClient() {
-            @Override
-            public boolean onJsAlert(WebView view, String url, String message, JsResult result) {
-                result.confirm(); // fermer l'alerte sans l'afficher
-                if (message != null && importActive && !loginDone) {
-                    String lower = message.toLowerCase();
-                    boolean isAuthError =
-                        (lower.contains("login") || lower.contains("identifiant")
-                            || lower.contains("mot de passe") || lower.contains("password"))
-                        && (lower.contains("incorrect") || lower.contains("invalide")
-                            || lower.contains("erreur") || lower.contains("error"));
-                    if (isAuthError) {
-                        handleBadCredentials();
-                    }
-                }
-                return true; // on gère l'alerte nous-mêmes
-            }
-        });
 
         hiddenWebView.setWebViewClient(new WebViewClient() {
             @Override
@@ -245,22 +222,52 @@ public class MainActivity extends AppCompatActivity {
                 if (!importActive || badCredentials) return;
                 if (!url.contains("tcs.eqso.be")) return;
 
-                boolean isLoginPage = !url.contains("RHTIME_Planning") && !url.contains("Page_Identification");
-                if (!loginDone && isLoginPage) {
+                if (url.contains("RHTIME_Planning")) {
+                    // Connexion réussie — page planning
+                    mainHandler.postDelayed(() -> extractHiddenToken(view, url), 500);
+                    return;
+                }
+
+                // Page de login (avec ou sans Page_Identification dans l'URL)
+                if (!loginDone) {
                     if (!loginAttempted) {
-                        // Première tentative — injecter les identifiants
+                        // Première visite — injecter les identifiants
                         loginAttempted = true;
                         injectAutologin(view, autoLoginUser, autoLoginPass);
                     } else {
-                        // Deuxième arrivée sur la page de login → identifiants incorrects
-                        // (filet de sécurité si le site ne déclenche pas d'alert JS)
-                        handleBadCredentials();
+                        // Déjà tenté → vérifier le contenu de la page
+                        // Le site utilise WDToastBase dans onload (pas un alert JS)
+                        // On cherche "incorrect" dans le HTML rendu
+                        mainHandler.postDelayed(
+                            () -> checkLoginPageResult(view, url), 1000);
                     }
-                } else {
-                    mainHandler.postDelayed(() -> extractHiddenToken(view, url), 500);
                 }
             }
         });
+    }
+
+    /**
+     * Injecte du JS dans la hidden WebView pour savoir si la page affiche
+     * une erreur d'identifiants. Appelé après une tentative de login échouée.
+     */
+    private void checkLoginPageResult(WebView view, String url) {
+        if (!importActive || badCredentials) return;
+        view.evaluateJavascript(
+            "(function(){" +
+            "  var h = (document.documentElement.innerHTML || '').toLowerCase();" +
+            "  return h.indexOf('incorrect') >= 0 ? 'bad' : 'ok';" +
+            "})()",
+            result -> {
+                if (!importActive || badCredentials) return;
+                if ("\"bad\"".equals(result)) {
+                    // Erreur confirmée dans le HTML → mauvais identifiants
+                    handleBadCredentials();
+                } else if (url.contains("Page_Identification")) {
+                    // Page_Identification sans erreur = étape intermédiaire valide
+                    mainHandler.post(() -> extractHiddenToken(view, url));
+                }
+                // Sinon : page de login sans erreur visible, on attend le prochain onPageFinished
+            });
     }
 
     private void extractHiddenToken(WebView view, String url) {
