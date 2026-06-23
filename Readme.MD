@@ -1,7 +1,7 @@
 ![Version](https://img.shields.io/badge/version-6.0.4-blue) ![Android](https://img.shields.io/badge/Android-7.0%2B-green) ![Windows](https://img.shields.io/badge/Windows-10%2B-0078D6?logo=windows&logoColor=white)
 
 
-À propos du projet
+### À propos du projet
 Cette application est issue de l'extension Google Chrome originale [TCS Schedule → ICS Exporter](https://chromewebstore.google.com/detail/bdlodfffneekfjheedoeedgknacbfogn?utm_source=item-share-cb). Développée par le même auteur, elle reprend le concept du projet initial tout en l'étendant sous la forme d'une application autonome avec de nouvelles fonctionnalités et améliorations.
 
 
